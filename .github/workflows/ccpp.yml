@@ -8,9 +8,9 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    container:
+      image: antonkozlov/docker-build
     steps:
-    - run: echo ${GITHUB_TOKEN} | docker login -u ${GITHUB_ACTOR} --password-stdin docker.pkg.github.com
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/checkout@v2
-    - run: docker run --rm -u $(id -u):$(id -g) -v $PWD:$PWD -w $PWD docker.pkg.github.com/org-crac/docker-build/image:latest bash -c "configure && make"
+    - run: configure 
+    - run: make
