@@ -12,5 +12,5 @@ jobs:
       image: antonkozlov/docker-build
     steps:
     - uses: actions/checkout@v2
-    - run: configure 
+    - run: bash ./configure 
     - run: make
