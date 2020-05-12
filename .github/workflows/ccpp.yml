@@ -13,4 +13,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: bash ./configure --disable-warnings-as-errors
-    - run: make
+    - run: make images
+    - uses: actions/upload-artifact@v2
+      with:
+        name: jdk
+        path: build/*/images/jdk
