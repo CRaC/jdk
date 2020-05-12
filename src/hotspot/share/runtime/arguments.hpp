@@ -490,6 +490,18 @@ class Arguments : AllStatic {
                                          char** base_archive_path,
                                          char** top_archive_path) NOT_CDS_RETURN;
 
+  enum CRMode {
+    CRNone,
+    Checkpoint,
+    Restore
+  };
+
+  static CRMode _crmode;
+  static const char* _crdir;
+  static const char* _criu;
+
+  static bool compute_criu_args(const char* optdir);
+
  public:
   // Parses the arguments, first phase
   static jint parse(const JavaVMInitArgs* args);
@@ -652,6 +664,16 @@ class Arguments : AllStatic {
   static bool atojulong(const char *s, julong* result);
 
   static bool has_jfr_option() NOT_JFR_RETURN_(false);
+
+  static bool can_checkpoint() {
+    return _crmode == Checkpoint || CRAllowToSkipCheckpoint;
+  }
+  static const char* crdir() {
+    return _crdir;
+  }
+  static const char* criu() {
+    return _criu;
+  }
 };
 
 // Disable options not supported in this release, with a warning if they

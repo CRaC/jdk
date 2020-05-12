@@ -30,6 +30,7 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.EOFException;
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.RandomAccessFile;
 import java.io.UncheckedIOException;
 import java.lang.ref.Cleaner.Cleanable;
@@ -61,6 +62,7 @@ import java.util.stream.StreamSupport;
 import jdk.internal.access.JavaLangAccess;
 import jdk.internal.access.JavaUtilZipFileAccess;
 import jdk.internal.access.SharedSecrets;
+import jdk.internal.crac.Core;
 import jdk.internal.misc.VM;
 import jdk.internal.perf.PerfCounter;
 import jdk.internal.ref.CleanerFactory;
@@ -817,6 +819,9 @@ class ZipFile implements ZipConstants, Closeable {
             this.zsrc = Source.get(file, (mode & OPEN_DELETE) != 0);
         }
 
+        public Source getSource() {
+            return zsrc;
+        }
     }
 
     /**
@@ -1036,6 +1041,20 @@ class ZipFile implements ZipConstants, Closeable {
         }
     }
 
+    private synchronized void beforeCheckpoint() {
+        RandomAccessFile f = res.getSource().getFile();
+        synchronized (f) {
+            FileDescriptor fd = null;
+            try {
+                fd = f.getFD();
+            } catch (IOException e) {
+            }
+            if (fd != null) {
+                Core.registerPersistent(fd);
+            }
+        }
+    }
+
     private static boolean isWindows;
     private static final JavaLangAccess JLA;
 
@@ -1102,7 +1121,7 @@ class ZipFile implements ZipConstants, Closeable {
         // private Entry[] entries;             // array of hashed cen entry
         //
         // To reduce the total size of entries further, we use a int[] here to store 3 "int"
-        // {@code hash}, {@code next and {@code "pos for each entry. The entry can then be
+        // {@code hash}, {@code next} and {@code "pos"} for each entry. The entry can then be
         // referred by their index of their positions in the {@code entries}.
         //
         private int[] entries;                  // array of hashed cen entry
@@ -1558,6 +1577,10 @@ class ZipFile implements ZipConstants, Closeable {
                  p += CENHDR + CENNAM(cen, p) + CENEXT(cen, p) + CENCOM(cen, p))
                 count++;
             return count;
+        }
+
+        public RandomAccessFile getFile() {
+            return zfile;
         }
     }
 }

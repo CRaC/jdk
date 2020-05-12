@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Azul Systems, Inc. in 2014. These
+ * modifications are Copyright (c) 2014 Azul Systems, Inc., and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "jvm.h"
 #include "classfile/classLoader.hpp"
@@ -60,6 +66,8 @@
 #include "jfr/jfr.hpp"
 #endif
 
+#include <libgen.h>
+
 // Note: This is a special bug reporting site for the JVM
 #ifdef VENDOR_URL_VM_BUG
 # define DEFAULT_VENDOR_URL_BUG VENDOR_URL_VM_BUG
@@ -97,6 +105,10 @@ bool   Arguments::_enable_preview               = false;
 
 char*  Arguments::SharedArchivePath             = NULL;
 char*  Arguments::SharedDynamicArchivePath      = NULL;
+
+Arguments::CRMode Arguments::_crmode = Arguments::CRNone;
+const char* Arguments::_crdir = NULL;
+const char* Arguments::_criu = NULL;
 
 AgentLibraryList Arguments::_libraryList;
 AgentLibraryList Arguments::_agentList;
@@ -287,6 +299,82 @@ bool Arguments::has_jfr_option() {
   return _has_jfr_option;
 }
 #endif
+
+bool Arguments::compute_criu_args(const char* optdir) {
+  const char* fs = os::file_separator();
+  const size_t fsl = strlen(fs);
+
+  char jvm_path[JVM_MAXPATHLEN];
+  os::jvm_path(jvm_path, sizeof(jvm_path));
+  // jdk/lib/server/libjvm.so
+  char *end = strrchr(jvm_path, *fs);
+  if (end != NULL) *end = '\0';
+  // jdk/lib/server
+  end = strrchr(jvm_path, *fs);
+  if (end != NULL) *end = '\0';
+  // jdk/lib
+  const char* variant = end != NULL ? end + 1 : "";
+  const int variant_len = strlen(variant);
+  const int jvm_path_len = strlen(jvm_path);
+
+  struct stat dummy;
+
+  if (optdir[0] == ':') {
+    _crdir = optdir + 1;
+  } else if (optdir[0] == '\0') {
+#define SUF "/cr"
+    const size_t crdirlen = jvm_path_len + fsl + variant_len + fsl + sizeof(SUF);
+    char *crdir = NEW_C_HEAP_ARRAY(char, crdirlen, mtInternal);
+    if (crdir != NULL) {
+      int r = jio_snprintf(crdir, crdirlen, "%s%s%s%s" SUF,
+          jvm_path, fs, variant, fs);
+      assert(r < (int)crdirlen, "len miscalc");
+      _crdir = crdir;
+    }
+#undef SUF
+  } else {
+    return false;
+  }
+
+  if (-1 == stat(_crdir, &dummy)) {
+    char* basebuf = strdup(_crdir);
+    char* base = ::basename(basebuf);
+    char* dirbuf = strdup(_crdir);
+    char* dir = ::dirname(dirbuf);
+
+    int dirfd = open(dir, O_RDONLY | O_DIRECTORY);
+    if (dirfd < 0) {
+      tty->print_cr("can't open CRDIR base %s", dir);
+      return false;
+    }
+    if (mkdirat(dirfd, base, 0700) < 0) {
+      tty->print_cr("can't create %s under dir %s", base, dir);
+      return false;
+    }
+    close(dirfd);
+    free(dirbuf);
+    free(basebuf);
+  }
+
+#define SUF "/criu"
+  const size_t criulen = jvm_path_len + fsl + sizeof(SUF);
+  char *criu = NEW_C_HEAP_ARRAY(char, criulen, mtInternal);
+  if (criu != NULL) {
+    int r = jio_snprintf(criu, criulen, "%s%s" SUF,
+      jvm_path, fs);
+    assert(r < (int)criulen, "len miscalc");
+  }
+#undef SUF
+  if (0 == stat(criu, &dummy)) {
+    _criu = criu;
+  } else {
+    FREE_C_HEAP_ARRAY(char, criu);
+    // use system one
+    _criu = "criu";
+  }
+
+  return true;
+}
 
 static void logOption(const char* opt) {
   if (PrintVMOptions) {
@@ -2989,6 +3077,22 @@ jint Arguments::parse_each_vm_init_arg(const JavaVMInitArgs* args, bool* patch_m
     } else if (match_jfr_option(&option)) {
       return JNI_EINVAL;
 #endif
+    } else if (match_option(option, "-Zcheckpoint", &tail)) {
+      _crmode = Checkpoint;
+      if (!compute_criu_args(tail)) {
+        return JNI_EINVAL;
+      }
+    } else if (match_option(option, "-Zrestore", &tail)) {
+      // 1.6 msec to main function
+      // 4 msec to JLI arg parse function
+      // 4.6 msec to here
+      _crmode = Restore;
+      if (!compute_criu_args(tail)) {
+        return JNI_EINVAL;
+      }
+      if (os::Linux::restore()) {
+        return JNI_ERR;
+      }
     } else if (match_option(option, "-XX:", &tail)) { // -XX:xxxx
       // Skip -XX:Flags= and -XX:VMOptionsFile= since those cases have
       // already been handled

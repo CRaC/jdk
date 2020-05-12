@@ -2192,7 +2192,7 @@ const size_t minimumSymbolTableSize = 1024;
                                                                             \
   /* flags for performance data collection */                               \
                                                                             \
-  product(bool, UsePerfData, true,                                          \
+  product(bool, UsePerfData, false,                                         \
           "Flag to disable jvmstat instrumentation for performance testing "\
           "and problem isolation purposes")                                 \
                                                                             \
@@ -2464,7 +2464,21 @@ const size_t minimumSymbolTableSize = 1024;
           "Start flight recording with options"))                           \
                                                                             \
   experimental(bool, UseFastUnorderedTimeStamps, false,                     \
-          "Use platform unstable time where supported for timestamps only")
+          "Use platform unstable time where supported for timestamps only") \
+                                                                            \
+  diagnostic(bool, CRAllowToSkipCheckpoint, false,                          \
+          "Allow implementation to not call Checkpoint if helper not found")\
+                                                                            \
+  diagnostic(bool, CRHeapDumpOnCheckpointException, false, "Dump heap on "  \
+      "CheckpointException thrown because of C/RaC precondition failed")    \
+                                                                            \
+  diagnostic(bool, CRPrintResourcesOnCheckpoint, false, "Print resources "  \
+      "to decide CheckpointException")                                      \
+                                                                            \
+  experimental(bool, CRDoThrowCheckpointException, true, "Throw "           \
+      "CheckpointException if uncheckpointable resource handle found")      \
+                                                                            \
+  product(bool, CRTrace, true, "Minimal C/R tracing")
 
 // Interface macros
 #define DECLARE_PRODUCT_FLAG(type, name, value, doc)      extern "C" type name;

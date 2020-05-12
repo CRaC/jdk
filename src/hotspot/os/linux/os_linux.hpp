@@ -215,6 +215,12 @@ class Linux {
   static bool os_version_is_known();
   static uint32_t os_version();
 
+  static void vm_create_start();
+  static Handle checkpoint(TRAPS);
+  static int restore();
+  static void register_persistent_fd(int fd, int st_dev, int st_ino);
+  static void deregister_persistent_fd(int fd, int st_dev, int st_ino);
+
   // Stack repair handling
 
   // none present
