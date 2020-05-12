@@ -12,10 +12,9 @@ jobs:
       image: antonkozlov/docker-build
     steps:
     - uses: actions/checkout@v2
-#     - run: bash ./configure --disable-warnings-as-errors --with-native-debug-symbols=none
-#     - run: make images
-#     - run: tar -C build/linux-x86_64-server-release/images/ -zcf $PWD/jdk.tar.gz jdk
-    - run: tar -zcf $PWD/jdk.tar.gz make
+    - run: bash ./configure --disable-warnings-as-errors --with-native-debug-symbols=none
+    - run: make images
+    - run: tar -C build/linux-x86_64-server-release/images/ -zcf $PWD/jdk.tar.gz jdk
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
