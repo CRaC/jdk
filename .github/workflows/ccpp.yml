@@ -9,6 +9,8 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    container:
+      image: docker.pkg.github.com/org-crac/docker-build/image:latest
     steps:
     - uses: actions/checkout@v2
     - name: configure
