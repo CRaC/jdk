@@ -12,5 +12,5 @@ jobs:
       image: antonkozlov/docker-build
     steps:
     - uses: actions/checkout@v2
-    - run: bash ./configure 
+    - run: bash ./configure --disable-warnings-as-errors
     - run: make
