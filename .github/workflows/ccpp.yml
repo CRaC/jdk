@@ -12,9 +12,23 @@ jobs:
       image: antonkozlov/docker-build
     steps:
     - uses: actions/checkout@v2
+    - run: | 
+        id=$(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/criu/releases/tags/HEAD | jq .assets[0].id)
+        curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/criu/releases/assets/$id -LJOH 'Accept: application/octet-stream'
+        tar axf criu-dist.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.PACKAGES }}
+
     - run: bash ./configure --disable-warnings-as-errors --with-native-debug-symbols=none
-    - run: make images
-    - run: tar -C build/linux-x86_64-server-release/images/ -zcf $PWD/jdk.tar.gz jdk
+    - run: |
+        make images
+        mv build/linux-x86_64-server-release/images/jdk .
+    - run: |
+        cp criu-dist/sbin/criu jdk/lib/criu
+        sudo chown root:root jdk/lib/criu
+        sudo chmod u+s jdk/lib/criu
+      
+    - run: tar -zcf jdk.tar.gz jdk
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -31,7 +45,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./jdk.tar.gz
         asset_name: jdk.tar.gz
         asset_content_type: application/gzip
