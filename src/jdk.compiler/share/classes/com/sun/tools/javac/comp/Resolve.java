@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1999, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1999, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1387,7 +1387,7 @@ public class Resolve {
     public static class InapplicableMethodException extends RuntimeException {
         private static final long serialVersionUID = 0;
 
-        JCDiagnostic diagnostic;
+        transient JCDiagnostic diagnostic;
 
         InapplicableMethodException(JCDiagnostic diag) {
             this.diagnostic = diag;
@@ -1489,7 +1489,13 @@ public class Resolve {
             if (sym.exists()) {
                 if (staticOnly &&
                     sym.kind == VAR &&
-                    sym.owner.kind == TYP &&
+                        // if it is a field
+                        (sym.owner.kind == TYP ||
+                        // or it is a local variable but it is not declared inside of the static local type
+                        // only records so far, then error
+                        (sym.owner.kind == MTH) &&
+                        (env.enclClass.sym.flags() & STATIC) != 0 &&
+                        sym.enclClass() != env.enclClass.sym) &&
                     (sym.flags() & STATIC) == 0)
                     return new StaticError(sym);
                 else
@@ -2391,7 +2397,7 @@ public class Resolve {
         if (kind.contains(KindSelector.TYP)) {
             RecoveryLoadClass recoveryLoadClass =
                     allowModules && !kind.contains(KindSelector.PCK) &&
-                    !pck.exists() && !env.info.isSpeculative ?
+                    !pck.exists() && !env.info.attributionMode.isSpeculative ?
                         doRecoveryLoadClass : noRecovery;
             Symbol sym = loadClass(env, fullname, recoveryLoadClass);
             if (sym.exists()) {
@@ -2819,6 +2825,7 @@ public class Resolve {
                                     typeargtypes, allowBoxing,
                                     useVarargs);
         chk.checkDeprecated(pos, env.info.scope.owner, sym);
+        chk.checkPreview(pos, sym);
         return sym;
     }
 

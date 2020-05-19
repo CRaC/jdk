@@ -31,6 +31,7 @@
 #include "jvmci/vmStructs_jvmci.hpp"
 #include "memory/universe.hpp"
 #include "oops/compressedOops.hpp"
+#include "oops/klass.inline.hpp"
 #include "runtime/sharedRuntime.hpp"
 #include "utilities/resourceHash.hpp"
 
@@ -43,6 +44,7 @@ int CompilerToVM::Data::Method_extra_stack_entries;
 address CompilerToVM::Data::SharedRuntime_ic_miss_stub;
 address CompilerToVM::Data::SharedRuntime_handle_wrong_method_stub;
 address CompilerToVM::Data::SharedRuntime_deopt_blob_unpack;
+address CompilerToVM::Data::SharedRuntime_deopt_blob_unpack_with_exception_in_tls;
 address CompilerToVM::Data::SharedRuntime_deopt_blob_uncommon_trap;
 
 size_t CompilerToVM::Data::ThreadLocalAllocBuffer_alignment_reserve;
@@ -96,6 +98,7 @@ void CompilerToVM::Data::initialize(JVMCI_TRAPS) {
   SharedRuntime_ic_miss_stub = SharedRuntime::get_ic_miss_stub();
   SharedRuntime_handle_wrong_method_stub = SharedRuntime::get_handle_wrong_method_stub();
   SharedRuntime_deopt_blob_unpack = SharedRuntime::deopt_blob()->unpack();
+  SharedRuntime_deopt_blob_unpack_with_exception_in_tls = SharedRuntime::deopt_blob()->unpack_with_exception_in_tls();
   SharedRuntime_deopt_blob_uncommon_trap = SharedRuntime::deopt_blob()->uncommon_trap();
 
   ThreadLocalAllocBuffer_alignment_reserve = ThreadLocalAllocBuffer::alignment_reserve();
@@ -227,7 +230,6 @@ JVMCIObjectArray CompilerToVM::initialize_intrinsics(JVMCI_TRAPS) {
   do_bool_flag(UseCompressedOops)                                          \
   X86_ONLY(do_bool_flag(UseCountLeadingZerosInstruction))                  \
   X86_ONLY(do_bool_flag(UseCountTrailingZerosInstruction))                 \
-  do_bool_flag(UseConcMarkSweepGC)                                         \
   do_bool_flag(UseG1GC)                                                    \
   do_bool_flag(UseParallelGC)                                              \
   do_bool_flag(UseParallelOldGC)                                           \
@@ -308,7 +310,8 @@ jobjectArray readConfiguration0(JNIEnv *env, JVMCI_TRAPS) {
         BOXED_BOOLEAN(box, *(jbyte*) vmField.address);
         assert(box.is_non_null(), "must have a box");
       } else if (strcmp(vmField.typeString, "int") == 0 ||
-                 strcmp(vmField.typeString, "jint") == 0) {
+                 strcmp(vmField.typeString, "jint") == 0 ||
+                 strcmp(vmField.typeString, "uint32_t") == 0) {
         BOXED_LONG(box, *(jint*) vmField.address);
         assert(box.is_non_null(), "must have a box");
       } else if (strcmp(vmField.typeString, "uint64_t") == 0) {
@@ -368,7 +371,7 @@ jobjectArray readConfiguration0(JNIEnv *env, JVMCI_TRAPS) {
 #define COUNT_FLAG(ignore) +1
 #ifdef ASSERT
 #define CHECK_FLAG(type, name) { \
-  JVMFlag* flag = JVMFlag::find_flag(#name, strlen(#name), /*allow_locked*/ true, /* return_flag */ true); \
+  const JVMFlag* flag = JVMFlag::find_declared_flag(#name); \
   assert(flag != NULL, "No such flag named " #name); \
   assert(flag->is_##type(), "JVMFlag " #name " is not of type " #type); \
 }

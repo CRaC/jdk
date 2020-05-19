@@ -60,9 +60,6 @@ import static jdk.javadoc.internal.doclets.toolkit.util.VisibleMemberTable.Kind.
  *  If you write code that depends on this, you do so at your own risk.
  *  This code and its internal interfaces are subject to change or
  *  deletion without notice.</b>
- *
- * @author Jamie Ho
- * @author Bhavesh Patel (Modified)
  */
 public abstract class MemberSummaryBuilder extends AbstractMemberBuilder {
 
@@ -320,7 +317,7 @@ public abstract class MemberSummaryBuilder extends AbstractMemberBuilder {
                     //necessary.
                     DocFinder.Output inheritedDoc =
                             DocFinder.search(configuration,
-                                    new DocFinder.Input(utils, (ExecutableElement) member));
+                                    new DocFinder.Input(utils, member));
                     if (inheritedDoc.holder != null
                             && !utils.getFirstSentenceTrees(inheritedDoc.holder).isEmpty()) {
                         // let the comment helper know of the overridden element
@@ -411,7 +408,7 @@ public abstract class MemberSummaryBuilder extends AbstractMemberBuilder {
                 blockTags.add(cmtutils.makeSeeTree(sb.toString(), setter));
             }
         }
-        cmtutils.setDocCommentTree(member, fullBody, blockTags, utils);
+        cmtutils.setDocCommentTree(member, fullBody, blockTags);
     }
 
     /**
@@ -473,7 +470,7 @@ public abstract class MemberSummaryBuilder extends AbstractMemberBuilder {
     private void addSummaryFootNote(TypeElement inheritedClass, SortedSet<Element> inheritedMembers,
                                     Content linksTree, MemberSummaryWriter writer) {
         for (Element member : inheritedMembers) {
-            TypeElement t = (utils.isPackagePrivate(inheritedClass) && !utils.isLinkable(inheritedClass))
+            TypeElement t = utils.isUndocumentedEnclosure(inheritedClass)
                     ? typeElement : inheritedClass;
             writer.addInheritedMemberSummary(t, member, inheritedMembers.first() == member,
                     inheritedMembers.last() == member, linksTree);

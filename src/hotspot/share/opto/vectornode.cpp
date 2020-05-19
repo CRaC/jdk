@@ -128,6 +128,9 @@ int VectorNode::opcode(int sopc, BasicType bt) {
   case Op_NegD:
     assert(bt == T_DOUBLE, "must be");
     return Op_NegVD;
+  case Op_RoundDoubleMode:
+    assert(bt == T_DOUBLE, "must be");
+    return Op_RoundDoubleModeV;
   case Op_SqrtF:
     assert(bt == T_FLOAT, "must be");
     return Op_SqrtVF;
@@ -235,7 +238,7 @@ bool VectorNode::implemented(int opc, uint vlen, BasicType bt) {
       (vlen > 1) && is_power_of_2(vlen) &&
       Matcher::vector_size_supported(bt, vlen)) {
     int vopc = VectorNode::opcode(opc, bt);
-    return vopc > 0 && Matcher::match_rule_supported_vector(vopc, vlen);
+    return vopc > 0 && Matcher::match_rule_supported_vector(vopc, vlen, bt);
   }
   return false;
 }
@@ -254,6 +257,13 @@ bool VectorNode::is_type_transition_to_int(Node* n) {
 
 bool VectorNode::is_muladds2i(Node* n) {
   if (n->Opcode() == Op_MulAddS2I) {
+    return true;
+  }
+  return false;
+}
+
+bool VectorNode::is_roundopD(Node *n) {
+  if (n->Opcode() == Op_RoundDoubleMode) {
     return true;
   }
   return false;
@@ -407,6 +417,8 @@ VectorNode* VectorNode::make(int opc, Node* n1, Node* n2, uint vlen, BasicType b
   case Op_MinV: return new MinVNode(n1, n2, vt);
   case Op_MaxV: return new MaxVNode(n1, n2, vt);
 
+  case Op_RoundDoubleModeV: return new RoundDoubleModeVNode(n1, n2, vt);
+
   case Op_MulAddVS2VI: return new MulAddVS2VINode(n1, n2, vt);
   default:
     fatal("Missed vector creation for '%s'", NodeClassNames[vopc]);
@@ -470,6 +482,38 @@ VectorNode* VectorNode::shift_count(Node* shift, Node* cnt, uint vlen, BasicType
   default:
     fatal("Missed vector creation for '%s'", NodeClassNames[shift->Opcode()]);
     return NULL;
+  }
+}
+
+bool VectorNode::is_vector_shift(int opc) {
+  assert(opc > _last_machine_leaf && opc < _last_opcode, "invalid opcode");
+  switch (opc) {
+  case Op_LShiftVB:
+  case Op_LShiftVS:
+  case Op_LShiftVI:
+  case Op_LShiftVL:
+  case Op_RShiftVB:
+  case Op_RShiftVS:
+  case Op_RShiftVI:
+  case Op_RShiftVL:
+  case Op_URShiftVB:
+  case Op_URShiftVS:
+  case Op_URShiftVI:
+  case Op_URShiftVL:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool VectorNode::is_shift_count(int opc) {
+  assert(opc > _last_machine_leaf && opc < _last_opcode, "invalid opcode");
+  switch (opc) {
+  case Op_RShiftCntV:
+  case Op_LShiftCntV:
+    return true;
+  default:
+    return false;
   }
 }
 

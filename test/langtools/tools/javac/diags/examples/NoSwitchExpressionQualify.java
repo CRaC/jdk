@@ -22,7 +22,6 @@
  */
 
 // key: compiler.err.no.switch.expression.qualify
-// options: --enable-preview --source 13
 
 class BreakComplexValueNoSwitchExpressions {
     void t() {

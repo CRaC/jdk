@@ -22,7 +22,6 @@
  */
 
 // key: compiler.err.invalid.yield
-// options: --enable-preview --source 13
 
 class BreakComplexValueNoSwitchExpressions {
     void t() {

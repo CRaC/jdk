@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -375,7 +375,7 @@ const Type* Type::make_constant_from_field(ciField* field, ciInstance* holder,
                                             field->is_autobox_cache());
   if (con_type != NULL && field->is_call_site_target()) {
     ciCallSite* call_site = holder->as_call_site();
-    if (!call_site->is_constant_call_site()) {
+    if (!call_site->is_fully_initialized_constant_call_site()) {
       ciMethodHandle* target = con.as_object()->as_method_handle();
       Compile::current()->dependencies()->assert_call_site_target_value(call_site, target);
     }
@@ -720,8 +720,11 @@ const Type *Type::hashcons(void) {
   // Since we just discovered a new Type, compute its dual right now.
   assert( !_dual, "" );         // No dual yet
   _dual = xdual();              // Compute the dual
-  if( cmp(this,_dual)==0 ) {    // Handle self-symmetric
-    _dual = this;
+  if (cmp(this, _dual) == 0) {  // Handle self-symmetric
+    if (_dual != this) {
+      delete _dual;
+      _dual = this;
+    }
     return this;
   }
   assert( !_dual->_dual, "" );  // No reverse dual yet
@@ -2099,7 +2102,7 @@ const Type *TypeAry::xmeet( const Type *t ) const {
     const TypeAry *a = t->is_ary();
     return TypeAry::make(_elem->meet_speculative(a->_elem),
                          _size->xmeet(a->_size)->is_int(),
-                         _stable & a->_stable);
+                         _stable && a->_stable);
   }
   case Top:
     break;
@@ -3001,15 +3004,13 @@ TypeOopPtr::TypeOopPtr(TYPES t, PTR ptr, ciKlass* k, bool xk, ciObject* o, int o
           ciField* field = k->get_field_by_offset(_offset, true);
           assert(field != NULL, "missing field");
           BasicType basic_elem_type = field->layout_type();
-          _is_ptr_to_narrowoop = UseCompressedOops && (basic_elem_type == T_OBJECT ||
-                                                       basic_elem_type == T_ARRAY);
+          _is_ptr_to_narrowoop = UseCompressedOops && is_reference_type(basic_elem_type);
         } else {
           // Instance fields which contains a compressed oop references.
           field = ik->get_field_by_offset(_offset, false);
           if (field != NULL) {
             BasicType basic_elem_type = field->layout_type();
-            _is_ptr_to_narrowoop = UseCompressedOops && (basic_elem_type == T_OBJECT ||
-                                                         basic_elem_type == T_ARRAY);
+            _is_ptr_to_narrowoop = UseCompressedOops && is_reference_type(basic_elem_type);
           } else if (klass()->equals(ciEnv::current()->Object_klass())) {
             // Compile::find_alias_type() cast exactness on all types to verify
             // that it does not affect alias type.
@@ -3047,10 +3048,6 @@ const Type *TypeOopPtr::cast_to_ptr_type(PTR ptr) const {
 const TypeOopPtr *TypeOopPtr::cast_to_instance_id(int instance_id) const {
   // There are no instances of a general oop.
   // Return self unchanged.
-  return this;
-}
-
-const TypeOopPtr *TypeOopPtr::cast_to_nonconst() const {
   return this;
 }
 
@@ -3560,11 +3557,6 @@ const TypeOopPtr *TypeInstPtr::cast_to_instance_id(int instance_id) const {
   return make(_ptr, klass(), _klass_is_exact, const_oop(), _offset, instance_id, _speculative, _inline_depth);
 }
 
-const TypeOopPtr *TypeInstPtr::cast_to_nonconst() const {
-  if (const_oop() == NULL) return this;
-  return make(NotNull, klass(), _klass_is_exact, NULL, _offset, _instance_id, _speculative, _inline_depth);
-}
-
 //------------------------------xmeet_unloaded---------------------------------
 // Compute the MEET of two InstPtrs when at least one is unloaded.
 // Assume classes are different since called after check for same name/class-loader
@@ -3869,7 +3861,7 @@ const Type *TypeInstPtr::xmeet_helper(const Type *t) const {
     bool subtype_exact = false;
     if( tinst_klass->equals(this_klass) ) {
       subtype = this_klass;
-      subtype_exact = below_centerline(ptr) ? (this_xk & tinst_xk) : (this_xk | tinst_xk);
+      subtype_exact = below_centerline(ptr) ? (this_xk && tinst_xk) : (this_xk || tinst_xk);
     } else if( !tinst_xk && this_klass->is_subtype_of( tinst_klass ) ) {
       subtype = this_klass;     // Pick subtyping class
       subtype_exact = this_xk;
@@ -4097,38 +4089,23 @@ const TypeOopPtr *TypeAryPtr::cast_to_instance_id(int instance_id) const {
   return make(_ptr, const_oop(), _ary, klass(), _klass_is_exact, _offset, instance_id, _speculative, _inline_depth);
 }
 
-const TypeOopPtr *TypeAryPtr::cast_to_nonconst() const {
-  if (const_oop() == NULL) return this;
-  return make(NotNull, NULL, _ary, klass(), _klass_is_exact, _offset, _instance_id, _speculative, _inline_depth);
-}
 
+//-----------------------------max_array_length-------------------------------
+// A wrapper around arrayOopDesc::max_array_length(etype) with some input normalization.
+jint TypeAryPtr::max_array_length(BasicType etype) {
+  if (!is_java_primitive(etype) && !is_reference_type(etype)) {
+    if (etype == T_NARROWOOP) {
+      etype = T_OBJECT;
+    } else if (etype == T_ILLEGAL) { // bottom[]
+      etype = T_BYTE; // will produce conservatively high value
+    } else {
+      fatal("not an element type: %s", type2name(etype));
+    }
+  }
+  return arrayOopDesc::max_array_length(etype);
+}
 
 //-----------------------------narrow_size_type-------------------------------
-// Local cache for arrayOopDesc::max_array_length(etype),
-// which is kind of slow (and cached elsewhere by other users).
-static jint max_array_length_cache[T_CONFLICT+1];
-static jint max_array_length(BasicType etype) {
-  jint& cache = max_array_length_cache[etype];
-  jint res = cache;
-  if (res == 0) {
-    switch (etype) {
-    case T_NARROWOOP:
-      etype = T_OBJECT;
-      break;
-    case T_NARROWKLASS:
-    case T_CONFLICT:
-    case T_ILLEGAL:
-    case T_VOID:
-      etype = T_BYTE;           // will produce conservatively high value
-      break;
-    default:
-      break;
-    }
-    cache = res = arrayOopDesc::max_array_length(etype);
-  }
-  return res;
-}
-
 // Narrow the given size type to the index range for the given array base type.
 // Return NULL if the resulting int type becomes empty.
 const TypeInt* TypeAryPtr::narrow_size_type(const TypeInt* size) const {
@@ -4351,7 +4328,7 @@ const Type *TypeAryPtr::xmeet_helper(const Type *t) const {
       if (below_centerline(this->_ptr)) {
         xk = this->_klass_is_exact;
       } else {
-        xk = (tap->_klass_is_exact | this->_klass_is_exact);
+        xk = (tap->_klass_is_exact || this->_klass_is_exact);
       }
       return make(ptr, const_oop(), tary, lazy_klass, xk, off, instance_id, speculative, depth);
     case Constant: {

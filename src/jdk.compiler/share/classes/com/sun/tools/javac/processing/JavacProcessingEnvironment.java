@@ -264,7 +264,9 @@ public class JavacProcessingEnvironment implements ProcessingEnvironment, Closea
                       module_prefix + "java.lang.annotation.Native",
                       module_prefix + "java.lang.annotation.Repeatable",
                       module_prefix + "java.lang.annotation.Retention",
-                      module_prefix + "java.lang.annotation.Target");
+                      module_prefix + "java.lang.annotation.Target",
+
+                      module_prefix + "java.io.Serial");
     }
 
     private void initProcessorLoader() {
@@ -971,8 +973,9 @@ public class JavacProcessingEnvironment implements ProcessingEnvironment, Closea
      * Computes the set of annotations on the symbol in question.
      * Leave class public for external testing purposes.
      */
+    @SuppressWarnings("preview")
     public static class ComputeAnnotationSet extends
-        ElementScanner9<Set<TypeElement>, Set<TypeElement>> {
+        ElementScanner14<Set<TypeElement>, Set<TypeElement>> {
         final Elements elements;
 
         public ComputeAnnotationSet(Elements elements) {
@@ -1512,10 +1515,19 @@ public class JavacProcessingEnvironment implements ProcessingEnvironment, Closea
     private List<ModuleSymbol> getModuleInfoFiles(List<? extends JCCompilationUnit> units) {
         List<ModuleSymbol> modules = List.nil();
         for (JCCompilationUnit unit : units) {
-            if (isModuleInfo(unit.sourcefile, JavaFileObject.Kind.SOURCE) &&
-                unit.defs.nonEmpty() &&
-                unit.defs.head.hasTag(Tag.MODULEDEF)) {
-                modules = modules.prepend(unit.modle);
+            if (isModuleInfo(unit.sourcefile, JavaFileObject.Kind.SOURCE) && unit.defs.nonEmpty()) {
+                for (JCTree tree : unit.defs) {
+                    if (tree.hasTag(Tag.IMPORT)) {
+                        continue;
+                    }
+                    else if (tree.hasTag(Tag.MODULEDEF)) {
+                        modules = modules.prepend(unit.modle);
+                        break;
+                    }
+                    else {
+                        break;
+                    }
+                }
             }
         }
         return modules.reverse();

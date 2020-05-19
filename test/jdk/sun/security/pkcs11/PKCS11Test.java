@@ -39,6 +39,7 @@ import java.security.AlgorithmParameters;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchProviderException;
+import java.security.Policy;
 import java.security.Provider;
 import java.security.ProviderException;
 import java.security.Security;
@@ -82,11 +83,11 @@ public abstract class PKCS11Test {
     static {
         // hack
         String absBase = new File(BASE).getAbsolutePath();
-        int k = absBase.indexOf(SEP + "test" + SEP + "sun" + SEP);
+        int k = absBase.indexOf(SEP + "test" + SEP + "jdk" + SEP);
         if (k < 0) k = 0;
-        String p1 = absBase.substring(0, k + 6);
-        String p2 = absBase.substring(k + 5);
-        CLOSED_BASE = p1 + "closed" + p2;
+        String p1 = absBase.substring(0, k);
+        String p2 = absBase.substring(k);
+        CLOSED_BASE = p1 + "/../closed" + p2;
 
         // set it as a system property to make it available in policy file
         System.setProperty("closed.base", CLOSED_BASE);
@@ -879,6 +880,9 @@ public abstract class PKCS11Test {
         case "MacOSX-x86_64-64":
             return fetchNssLib(MACOSX_X64.class);
 
+        case "Linux-amd64-64":
+            return fetchNssLib(LINUX_X64.class);
+
         default:
             return null;
         }
@@ -900,27 +904,35 @@ public abstract class PKCS11Test {
                         + "\nPlease make sure the artifact is available.");
             }
         }
+        Policy.setPolicy(null); // Clear the policy created by JIB if any
         return path;
     }
 
     @Artifact(
             organization = "jpg.tests.jdk.nsslib",
             name = "nsslib-windows_x64",
-            revision = "3.41-VS2017",
+            revision = "3.46-VS2017",
             extension = "zip")
     private static class WINDOWS_X64 { }
 
     @Artifact(
             organization = "jpg.tests.jdk.nsslib",
             name = "nsslib-windows_x86",
-            revision = "3.41-VS2017",
+            revision = "3.46-VS2017",
             extension = "zip")
     private static class WINDOWS_X86 { }
 
     @Artifact(
             organization = "jpg.tests.jdk.nsslib",
             name = "nsslib-macosx_x64",
-            revision = "3.41",
+            revision = "3.46",
             extension = "zip")
     private static class MACOSX_X64 { }
+
+    @Artifact(
+            organization = "jpg.tests.jdk.nsslib",
+            name = "nsslib-linux_x64",
+            revision = "3.46",
+            extension = "zip")
+    private static class LINUX_X64 { }
 }

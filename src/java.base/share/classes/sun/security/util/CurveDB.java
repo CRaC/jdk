@@ -62,13 +62,13 @@ public class CurveDB {
     }
 
     // Return a NamedCurve for the specified OID/name or null if unknown.
-    static NamedCurve lookup(String name) {
+    public static NamedCurve lookup(String name) {
         NamedCurve spec = oidMap.get(name);
         if (spec != null) {
             return spec;
         }
 
-        return nameMap.get(name);
+        return nameMap.get(name.toLowerCase(Locale.ENGLISH));
     }
 
     // Return EC parameters for the specified field size. If there are known
@@ -83,7 +83,7 @@ public class CurveDB {
 
     // Convert the given ECParameterSpec object to a NamedCurve object.
     // If params does not represent a known named curve, return null.
-    static NamedCurve lookup(ECParameterSpec params) {
+    public static NamedCurve lookup(ECParameterSpec params) {
         if ((params instanceof NamedCurve) || (params == null)) {
             return (NamedCurve)params;
         }
@@ -140,7 +140,8 @@ public class CurveDB {
 
         String[] commonNames = nameSplitPattern.split(name);
         for (String commonName : commonNames) {
-            if (nameMap.put(commonName.trim(), params) != null) {
+            if (nameMap.put(commonName.trim().toLowerCase(Locale.ENGLISH),
+                            params) != null) {
                 throw new RuntimeException("Duplication name: " + commonName);
             }
         }
@@ -153,8 +154,27 @@ public class CurveDB {
         }
     }
 
+    private static class Holder {
+        private static final Pattern nameSplitPattern = Pattern.compile(
+                SPLIT_PATTERN);
+    }
+
+    // Return all the names the EC curve could be using.
+    static String[] getNamesByOID(String oid) {
+        NamedCurve nc = oidMap.get(oid);
+        if (nc == null) {
+            return new String[0];
+        }
+        String[] list = Holder.nameSplitPattern.split(nc.getName());
+        int i = 0;
+        do {
+            list[i] = list[i].trim();
+        } while (++i < list.length);
+        return list;
+    }
+
     static {
-        Pattern nameSplitPattern = Pattern.compile(SPLIT_PATTERN);
+        Pattern nameSplitPattern = Holder.nameSplitPattern;
 
         /* SEC2 prime curves */
         add("secp112r1", "1.3.132.0.6", P,

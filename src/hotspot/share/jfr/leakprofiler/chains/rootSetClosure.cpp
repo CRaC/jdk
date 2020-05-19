@@ -32,7 +32,7 @@
 #include "jfr/leakprofiler/chains/dfsClosure.hpp"
 #include "jfr/leakprofiler/chains/edgeQueue.hpp"
 #include "jfr/leakprofiler/chains/rootSetClosure.hpp"
-#include "jfr/leakprofiler/utilities/unifiedOop.hpp"
+#include "jfr/leakprofiler/utilities/unifiedOopRef.inline.hpp"
 #include "memory/universe.hpp"
 #include "oops/access.inline.hpp"
 #include "oops/oop.inline.hpp"
@@ -42,9 +42,6 @@
 #include "runtime/thread.hpp"
 #include "services/management.hpp"
 #include "utilities/align.hpp"
-#if INCLUDE_JVMCI
-#include "jvmci/jvmci.hpp"
-#endif
 
 template <typename Delegate>
 RootSetClosure<Delegate>::RootSetClosure(Delegate* delegate) : _delegate(delegate) {}
@@ -52,20 +49,9 @@ RootSetClosure<Delegate>::RootSetClosure(Delegate* delegate) : _delegate(delegat
 template <typename Delegate>
 void RootSetClosure<Delegate>::do_oop(oop* ref) {
   assert(ref != NULL, "invariant");
-  // We discard unaligned root references because
-  // our reference tagging scheme will use
-  // the lowest bit in a represented reference
-  // to indicate the reference is narrow.
-  // It is mainly roots delivered via nmethods::do_oops()
-  // that come in unaligned. It should be ok to duck these
-  // since they are supposedly weak.
-  if (!is_aligned(ref, HeapWordSize)) {
-    return;
-  }
-
   assert(is_aligned(ref, HeapWordSize), "invariant");
   if (*ref != NULL) {
-    _delegate->do_root(ref);
+    _delegate->do_root(UnifiedOopRef::encode_in_native(ref));
   }
 }
 
@@ -73,9 +59,8 @@ template <typename Delegate>
 void RootSetClosure<Delegate>::do_oop(narrowOop* ref) {
   assert(ref != NULL, "invariant");
   assert(is_aligned(ref, sizeof(narrowOop)), "invariant");
-  const oop pointee = RawAccess<>::oop_load(ref);
-  if (pointee != NULL) {
-    _delegate->do_root(UnifiedOop::encode(ref));
+  if (*ref != 0) {
+    _delegate->do_root(UnifiedOopRef::encode_in_native(ref));
   }
 }
 
@@ -86,17 +71,15 @@ void RootSetClosure<Delegate>::process() {
   RootSetClosureMarkScope mark_scope;
   CLDToOopClosure cldt_closure(this, ClassLoaderData::_claim_none);
   ClassLoaderDataGraph::always_strong_cld_do(&cldt_closure);
-  CodeBlobToOopClosure blobs(this, false);
-  Threads::oops_do(this, &blobs);
+  // We don't follow code blob oops, because they have misaligned oops.
+  Threads::oops_do(this, NULL);
   ObjectSynchronizer::oops_do(this);
   Universe::oops_do(this);
   JNIHandles::oops_do(this);
   JvmtiExport::oops_do(this);
   SystemDictionary::oops_do(this);
   Management::oops_do(this);
-  StringTable::oops_do(this);
   AOTLoader::oops_do(this);
-  JVMCI_ONLY(JVMCI::oops_do(this);)
 }
 
 template class RootSetClosure<BFSClosure>;

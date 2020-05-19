@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -104,6 +104,7 @@ import org.graalvm.compiler.nodes.extended.SwitchNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
 import org.graalvm.compiler.nodes.spi.NodeValueMap;
+import org.graalvm.compiler.nodes.spi.NodeWithState;
 import org.graalvm.compiler.nodes.virtual.VirtualObjectNode;
 import org.graalvm.compiler.options.OptionValues;
 
@@ -735,26 +736,26 @@ public abstract class NodeLIRBuilder implements NodeLIRBuilderTool, LIRGeneratio
         if (!deopt.canDeoptimize()) {
             return null;
         }
-        return stateFor(getFrameState(deopt));
+        return stateFor(deopt, getFrameState(deopt));
     }
 
     public LIRFrameState stateWithExceptionEdge(DeoptimizingNode deopt, LabelRef exceptionEdge) {
         if (!deopt.canDeoptimize()) {
             return null;
         }
-        return stateForWithExceptionEdge(getFrameState(deopt), exceptionEdge);
+        return stateForWithExceptionEdge(deopt, getFrameState(deopt), exceptionEdge);
     }
 
-    public LIRFrameState stateFor(FrameState state) {
-        return stateForWithExceptionEdge(state, null);
+    public LIRFrameState stateFor(NodeWithState deopt, FrameState state) {
+        return stateForWithExceptionEdge(deopt, state, null);
     }
 
-    public LIRFrameState stateForWithExceptionEdge(FrameState state, LabelRef exceptionEdge) {
+    public LIRFrameState stateForWithExceptionEdge(NodeWithState deopt, FrameState state, LabelRef exceptionEdge) {
         if (gen.needOnlyOopMaps()) {
             return new LIRFrameState(null, null, null);
         }
-        assert state != null;
-        return getDebugInfoBuilder().build(state, exceptionEdge);
+        assert state != null : deopt;
+        return getDebugInfoBuilder().build(deopt, state, exceptionEdge);
     }
 
     @Override
@@ -765,7 +766,7 @@ public abstract class NodeLIRBuilder implements NodeLIRBuilderTool, LIRGeneratio
 
     @Override
     public void visitFullInfopointNode(FullInfopointNode i) {
-        append(new FullInfopointOp(stateFor(i.getState()), i.getReason()));
+        append(new FullInfopointOp(stateFor(i, i.getState()), i.getReason()));
     }
 
     @Override

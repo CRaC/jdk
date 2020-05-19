@@ -109,6 +109,7 @@ import jdk.internal.util.ArraysSupport;
 public class ArrayList<E> extends AbstractList<E>
         implements List<E>, RandomAccess, Cloneable, java.io.Serializable
 {
+    @java.io.Serial
     private static final long serialVersionUID = 8683452581122892189L;
 
     /**
@@ -849,6 +850,7 @@ public class ArrayList<E> extends AbstractList<E>
      *             instance is emitted (int), followed by all of its elements
      *             (each an {@code Object}) in the proper order.
      */
+    @java.io.Serial
     private void writeObject(java.io.ObjectOutputStream s)
         throws java.io.IOException {
         // Write out element count, and any hidden stuff
@@ -876,6 +878,7 @@ public class ArrayList<E> extends AbstractList<E>
      *         could not be found
      * @throws java.io.IOException if an I/O error occurs
      */
+    @java.io.Serial
     private void readObject(java.io.ObjectInputStream s)
         throws java.io.IOException, ClassNotFoundException {
 
@@ -1130,7 +1133,7 @@ public class ArrayList<E> extends AbstractList<E>
             this.parent = parent;
             this.offset = parent.offset + fromIndex;
             this.size = toIndex - fromIndex;
-            this.modCount = root.modCount;
+            this.modCount = parent.modCount;
         }
 
         public E set(int index, E element) {
@@ -1283,7 +1286,7 @@ public class ArrayList<E> extends AbstractList<E>
             return new ListIterator<E>() {
                 int cursor = index;
                 int lastRet = -1;
-                int expectedModCount = root.modCount;
+                int expectedModCount = SubList.this.modCount;
 
                 public boolean hasNext() {
                     return cursor != SubList.this.size;
@@ -1327,7 +1330,7 @@ public class ArrayList<E> extends AbstractList<E>
                         final Object[] es = root.elementData;
                         if (offset + i >= es.length)
                             throw new ConcurrentModificationException();
-                        for (; i < size && modCount == expectedModCount; i++)
+                        for (; i < size && root.modCount == expectedModCount; i++)
                             action.accept(elementAt(es, offset + i));
                         // update once at end to reduce heap write traffic
                         cursor = i;
@@ -1353,7 +1356,7 @@ public class ArrayList<E> extends AbstractList<E>
                         SubList.this.remove(lastRet);
                         cursor = lastRet;
                         lastRet = -1;
-                        expectedModCount = root.modCount;
+                        expectedModCount = SubList.this.modCount;
                     } catch (IndexOutOfBoundsException ex) {
                         throw new ConcurrentModificationException();
                     }
@@ -1379,7 +1382,7 @@ public class ArrayList<E> extends AbstractList<E>
                         SubList.this.add(i, e);
                         cursor = i + 1;
                         lastRet = -1;
-                        expectedModCount = root.modCount;
+                        expectedModCount = SubList.this.modCount;
                     } catch (IndexOutOfBoundsException ex) {
                         throw new ConcurrentModificationException();
                     }

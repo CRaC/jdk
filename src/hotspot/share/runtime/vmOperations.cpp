@@ -51,12 +51,9 @@
 const char* VM_Operation::_names[VM_Operation::VMOp_Terminating] = \
   { VM_OPS_DO(VM_OP_NAME_INITIALIZE) };
 
-void VM_Operation::set_calling_thread(Thread* thread, ThreadPriority priority) {
+void VM_Operation::set_calling_thread(Thread* thread) {
   _calling_thread = thread;
-  assert(MinPriority <= priority && priority <= MaxPriority, "sanity check");
-  _priority = priority;
 }
-
 
 void VM_Operation::evaluate() {
   ResourceMark rm;
@@ -76,22 +73,12 @@ void VM_Operation::evaluate() {
   }
 }
 
-const char* VM_Operation::mode_to_string(Mode mode) {
-  switch(mode) {
-    case _safepoint      : return "safepoint";
-    case _no_safepoint   : return "no safepoint";
-    case _concurrent     : return "concurrent";
-    case _async_safepoint: return "async safepoint";
-    default              : return "unknown";
-  }
-}
 // Called by fatal error handler.
 void VM_Operation::print_on_error(outputStream* st) const {
   st->print("VM_Operation (" PTR_FORMAT "): ", p2i(this));
   st->print("%s", name());
 
-  const char* mode = mode_to_string(evaluation_mode());
-  st->print(", mode: %s", mode);
+  st->print(", mode: %s", evaluate_at_safepoint() ? "safepoint" : "no safepoint");
 
   if (calling_thread()) {
     st->print(", requested by thread " PTR_FORMAT, p2i(calling_thread()));
@@ -116,18 +103,6 @@ void VM_ClearICs::doit() {
   } else {
     CodeCache::clear_inline_caches();
   }
-}
-
-void VM_Deoptimize::doit() {
-  // We do not want any GCs to happen while we are in the middle of this VM operation
-  ResourceMark rm;
-  DeoptimizationMarker dm;
-
-  // Deoptimize all activations depending on marked nmethods
-  Deoptimization::deoptimize_dependents();
-
-  // Make the dependent methods not entrant
-  CodeCache::make_marked_nmethods_not_entrant();
 }
 
 void VM_MarkActiveNMethods::doit() {
@@ -522,7 +497,7 @@ void VM_Exit::wait_if_vm_exited() {
       Thread::current_or_null() != _shutdown_thread) {
     // _vm_exited is set at safepoint, and the Threads_lock is never released
     // we will block here until the process dies
-    Threads_lock->lock_without_safepoint_check();
+    Threads_lock->lock();
     ShouldNotReachHere();
   }
 }
