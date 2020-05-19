@@ -199,12 +199,6 @@ class Linux {
 
   static jlong fast_thread_cpu_time(clockid_t clockid);
 
-  static void vm_create_start();
-  static Handle checkpoint(TRAPS);
-  static int restore();
-  static void register_persistent_fd(int fd, int st_dev, int st_ino);
-  static void deregister_persistent_fd(int fd, int st_dev, int st_ino);
-
   // Stack repair handling
 
   // none present

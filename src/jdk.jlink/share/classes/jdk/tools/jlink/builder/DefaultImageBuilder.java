@@ -200,13 +200,8 @@ public final class DefaultImageBuilder implements ImageBuilder {
                 Path lib = root.resolve(LIB_DIRNAME);
                 if (Files.isDirectory(lib)) {
                     Files.find(lib, 2, (path, attrs) -> {
-                        String fileName = path.getFileName().toString();
-                        return fileName.equals("jspawnhelper")
-                            || fileName.equals("jexec")
-                            || fileName.equals("restore-script")
-                            || fileName.equals("wait")
-                            || fileName.equals("criu")
-                            || fileName.equals("javatime");
+                        return path.getFileName().toString().equals("jspawnhelper")
+                                || path.getFileName().toString().equals("jexec");
                     }).forEach(this::setExecutable);
                 }
 

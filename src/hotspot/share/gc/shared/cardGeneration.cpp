@@ -296,9 +296,6 @@ void CardGeneration::compute_new_size() {
                         expansion_for_promotion / (double) K,
                         shrink_bytes / (double) K);
   }
-  if (Universe::heap()->do_cleanup_unused()) {
-    shrink_bytes = capacity_after_gc - used_after_gc;
-  }
   // Don't shrink unless it's significant
   if (shrink_bytes >= _min_heap_delta_bytes) {
     shrink(shrink_bytes);

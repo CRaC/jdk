@@ -25,12 +25,8 @@
 
 package sun.nio.ch;
 
-import jdk.crac.Resource;
-import jdk.internal.crac.JDKResource;
-
 import java.io.IOException;
 import java.nio.channels.ClosedSelectorException;
-import java.nio.channels.IllegalSelectorException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
@@ -51,44 +47,20 @@ import static sun.nio.ch.EPoll.EPOLL_CTL_MOD;
  * Linux epoll based Selector implementation
  */
 
-class EPollSelectorImpl extends SelectorImpl implements JDKResource {
+class EPollSelectorImpl extends SelectorImpl {
 
     // maximum number of events to poll in one call to epoll_wait
     private static final int NUM_EPOLLEVENTS = Math.min(IOUtil.fdLimit(), 1024);
 
-    private enum CheckpointRestoreState {
-        NORMAL_OPERATION,
-        CHECKPOINT_TRANSITION,
-        CHECKPOINTED,
-        CHECKPOINT_ERROR,
-        RESTORE_TRANSITION,
-    }
-
-    private static class MoveToCheckpointThread extends Thread {
-        private Selector selector;
-
-        MoveToCheckpointThread(Selector selector) {
-            this.selector = selector;
-        }
-
-        @Override
-        public void run() {
-            try {
-                selector.select(1);
-            } catch (IOException e) {
-            }
-        }
-    }
-
     // epoll file descriptor
-    private int epfd;
+    private final int epfd;
 
     // address of poll array when polling with epoll_wait
-    private long pollArrayAddress;
+    private final long pollArrayAddress;
 
     // file descriptors used for interrupt
-    private int fd0;
-    private int fd1;
+    private final int fd0;
+    private final int fd1;
 
     // maps file descriptor to selection key, synchronize on selector
     private final Map<Integer, SelectionKeyImpl> fdToKey = new HashMap<>();
@@ -101,15 +73,16 @@ class EPollSelectorImpl extends SelectorImpl implements JDKResource {
     private final Object interruptLock = new Object();
     private boolean interruptTriggered;
 
-    private volatile CheckpointRestoreState checkpointState = CheckpointRestoreState.NORMAL_OPERATION;;
+    EPollSelectorImpl(SelectorProvider sp) throws IOException {
+        super(sp);
 
-    private void initFDs() throws IOException {
-        epfd = EPoll.create();
+        this.epfd = EPoll.create();
+        this.pollArrayAddress = EPoll.allocatePollArray(NUM_EPOLLEVENTS);
 
         try {
             long fds = IOUtil.makePipe(false);
-            fd0 = (int) (fds >>> 32);
-            fd1 = (int) fds;
+            this.fd0 = (int) (fds >>> 32);
+            this.fd1 = (int) fds;
         } catch (IOException ioe) {
             EPoll.freePollArray(pollArrayAddress);
             FileDispatcherImpl.closeIntFD(epfd);
@@ -120,66 +93,9 @@ class EPollSelectorImpl extends SelectorImpl implements JDKResource {
         EPoll.ctl(epfd, EPOLL_CTL_ADD, fd0, EPOLLIN);
     }
 
-    EPollSelectorImpl(SelectorProvider sp) throws IOException {
-        super(sp);
-        pollArrayAddress = EPoll.allocatePollArray(NUM_EPOLLEVENTS);
-        initFDs();
-        // trigger FileDispatcherImpl initialization
-        new FileDispatcherImpl();
-        jdk.internal.crac.Core.getJDKContext().register(this);
-    }
-
     private void ensureOpen() {
         if (!isOpen())
             throw new ClosedSelectorException();
-    }
-
-    private boolean processCheckpointRestore() throws IOException {
-        assert Thread.holdsLock(this);
-
-        if (checkpointState != CheckpointRestoreState.CHECKPOINT_TRANSITION) {
-            return false;
-        }
-
-        synchronized (interruptLock) {
-            IOUtil.drain(fd0);
-
-            CheckpointRestoreState thisState;
-            if (fdToKey.size() == 0) {
-                FileDispatcherImpl.closeIntFD(epfd);
-                FileDispatcherImpl.closeIntFD(fd0);
-                FileDispatcherImpl.closeIntFD(fd1);
-                thisState = CheckpointRestoreState.CHECKPOINTED;
-            } else {
-                thisState = CheckpointRestoreState.CHECKPOINT_ERROR;
-            }
-
-            checkpointState = thisState;
-            interruptLock.notifyAll();
-            while (checkpointState == thisState) {
-                try {
-                    interruptLock.wait();
-                } catch (InterruptedException e) {
-                }
-            }
-
-            assert checkpointState == CheckpointRestoreState.RESTORE_TRANSITION;
-            if (thisState == CheckpointRestoreState.CHECKPOINTED) {
-                initFDs();
-            }
-            checkpointState = CheckpointRestoreState.NORMAL_OPERATION;
-            interruptLock.notifyAll();
-
-            if (interruptTriggered) {
-                try {
-                    IOUtil.write1(fd1, (byte)0);
-                } catch (IOException ioe) {
-                    throw new InternalError(ioe);
-                }
-            }
-        }
-
-        return true;
     }
 
     @Override
@@ -201,9 +117,7 @@ class EPollSelectorImpl extends SelectorImpl implements JDKResource {
 
             do {
                 long startTime = timedPoll ? System.nanoTime() : 0;
-                do {
-                    numEntries = EPoll.wait(epfd, pollArrayAddress, NUM_EPOLLEVENTS, to);
-                } while (processCheckpointRestore());
+                numEntries = EPoll.wait(epfd, pollArrayAddress, NUM_EPOLLEVENTS, to);
                 if (numEntries == IOStatus.INTERRUPTED && timedPoll) {
                     // timed poll interrupted so need to adjust timeout
                     long adjust = System.nanoTime() - startTime;
@@ -285,7 +199,7 @@ class EPollSelectorImpl extends SelectorImpl implements JDKResource {
             }
         }
 
-        if (interrupted && !(Thread.currentThread() instanceof MoveToCheckpointThread)) {
+        if (interrupted) {
             clearInterrupt();
         }
 
@@ -352,61 +266,5 @@ class EPollSelectorImpl extends SelectorImpl implements JDKResource {
             IOUtil.drain(fd0);
             interruptTriggered = false;
         }
-    }
-
-    @Override
-    public void beforeCheckpoint() throws Exception {
-        if (!isOpen()) {
-            return;
-        }
-
-        synchronized (interruptLock) {
-            checkpointState = CheckpointRestoreState.CHECKPOINT_TRANSITION;
-            IOUtil.write1(fd1, (byte)0);
-            int tries = 5;
-            while (checkpointState == CheckpointRestoreState.CHECKPOINT_TRANSITION && 0 < tries--) {
-                try {
-                    interruptLock.wait(5);
-                } catch (InterruptedException e) {
-                }
-            }
-            if (checkpointState == CheckpointRestoreState.CHECKPOINT_TRANSITION) {
-                Thread thr = new MoveToCheckpointThread(this);
-                thr.setDaemon(true);
-                thr.start();
-            }
-            while (checkpointState == CheckpointRestoreState.CHECKPOINT_TRANSITION) {
-                try {
-                    interruptLock.wait();
-                } catch (InterruptedException e) {
-                }
-            }
-            if (checkpointState == CheckpointRestoreState.CHECKPOINT_ERROR) {
-                throw new IllegalSelectorException();
-            }
-        }
-    }
-
-    @Override
-    public void afterRestore() throws Exception {
-        if (!isOpen()) {
-            return;
-        }
-
-        synchronized (interruptLock) {
-            checkpointState = CheckpointRestoreState.RESTORE_TRANSITION;
-            interruptLock.notifyAll();
-            while (checkpointState == CheckpointRestoreState.RESTORE_TRANSITION) {
-                try {
-                    interruptLock.wait();
-                } catch (InterruptedException e) {
-                }
-            }
-        }
-    }
-
-    @Override
-    public int getPriority() {
-        return -1;
     }
 }
