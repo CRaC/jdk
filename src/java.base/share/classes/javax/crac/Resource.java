@@ -1,4 +1,4 @@
-// Copyright 2017-2019 Azul Systems, Inc.
+// Copyright 2017-2020 Azul Systems, Inc.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -25,17 +25,31 @@
 package javax.crac;
 
 /**
- * TODO
+ * {@code Resource} is an abstract entity that should be notified when
+ * Java Runtime performs checkpoint or restore (see {@code Core} for definition).
+ * Usually {@code Resource} implemented by an object corresponding to some
+ * external resource (i.e. of operating system), which is not under full control of the Java Runtime.
+ * The {@code Resource}'s implementation task is to align external resource state with a state of the Java object, that is,
+ * to provide shutdown procedure for checkpoint and re-initialization for restore operations.
+ *
+ * {@code Resource} must be registered in a {@code Context} to be notified.
+ * For example, {@code Core} provides a global context that dispatches notification
+ * to all required {@code Resource}'s and {@code Context}'es.
+ *
  */
 public interface Resource {
 
     /**
-     * @throws Exception TODO
+     * Called in transition to checkpoint.
+     *
+     * @throws Exception if external resource cannot be shutdown.
      */
     void beforeCheckpoint() throws Exception;
 
     /**
-     * @throws Exception TODO
+     * Called in transition from checkpoint to operating state.
+     *
+     * @throws Exception if external resource cannot be re-initialized.
      */
     void afterRestore() throws Exception;
 }

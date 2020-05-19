@@ -3,42 +3,51 @@ package javax.crac;
 import java.io.PrintStream;
 
 /**
- * TODO
+ * {@code CheckpointRestoreException} is a collection of exception(s)
+ * that happened on checkpoint or restore due to some or many
+ * {@code Resource}'s were unable to succeed in
+ * {@code beforeCheckpoint} or {@code afterRestore} calls.
  */
 public class CheckpointRestoreException extends Exception {
-    private static final long serialVersionUID = 0;
+    private static final long serialVersionUID = -806684803281289037L;
 
-    private jdk.crac.CheckpointRestoreException exception;
-
-    /*not-public*/ CheckpointRestoreException(jdk.crac.CheckpointRestoreException exception) {
-        this.exception = exception;
-    }
+    private Exception[] exceptions;
 
     /**
-     * @param exceptions TODO
+     * Constructs a {@code CheckpointRestoreException} with
+     * an array of exceptions that caused this exception.
+     *
+     * @param exceptions Array of exceptions that caused this exception.
      */
     public CheckpointRestoreException(Exception[] exceptions) {
-        this.exception = new jdk.crac.CheckpointRestoreException(exceptions);
+        this.exceptions = exceptions;
     }
 
     /**
-     * @return TODO
+     * Returns array of exceptions that caused this exception.
+     *
+     * @return Array of exceptions.
      */
     public Exception[] getExceptions() {
-        return exception.getExceptions();
+        return exceptions;
     }
 
     /**
-     * @param s TODO
+     * Prints information about exceptions that caused this exception
+     * to a provided {@code PrintStream}.
+     *
+     * @param stream Stream to print the information to.
      */
-    public void printExceptions(PrintStream s) {
-        exception.printExceptions(s);
+    public void printExceptions(PrintStream stream) {
+        for (int i = 0; i < exceptions.length; ++i) {
+            stream.println("  " + exceptions[i].toString());
+        }
     }
 
     /**
-     * TODO
+     * Prints information about exceptions that caused this exception to {@code System.err}.
      */
     public void printExceptions() {
-        exception.printExceptions(System.err);
+        printExceptions(System.err);
     }
 }
