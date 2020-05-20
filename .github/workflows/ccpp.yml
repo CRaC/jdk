@@ -19,24 +19,33 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.PACKAGES }}
 
-    - run: bash ./configure --disable-warnings-as-errors --with-native-debug-symbols=none
-    - run: |
-        make images
-        mv build/linux-x86_64-server-release/images/jdk .
-    - run: |
-        cp criu-dist/sbin/criu jdk/lib/criu
-        sudo chown root:root jdk/lib/criu
-        sudo chmod u+s jdk/lib/criu
-      
-    - run: tar -zcf jdk.tar.gz jdk
+#     - run: bash ./configure --disable-warnings-as-errors --with-native-debug-symbols=none
+#     - run: |
+#         make images
+#         mv build/linux-x86_64-server-release/images/jdk .
+#     - run: |
+#         cp criu-dist/sbin/criu jdk/lib/criu
+#         sudo chown root:root jdk/lib/criu
+#         sudo chmod u+s jdk/lib/criu
+    - name: Compute release name
+      id: release
+      run: echo ::set-output name=name::${GITHUB_REF#refs/*/}
+    - name: Delete old release
+      run: |
+        id=$(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/jdk/releases/tags/release-${{ steps.release.outputs.name }} | jq '.id')
+        curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/jdk/releases/$id || true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - run: tar -zcf jdk.tar.gz make
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: HEAD
-        release_name: Release HEAD
+        tag_name: release-${{ steps.release.outputs.name }}
+        release_name: Release ${{ steps.release.outputs.name }}
         draft: false
         prerelease: false
     - name: Upload Release Asset
