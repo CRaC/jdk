@@ -34,8 +34,6 @@ import java.io.PrintStream;
 public class CheckpointRestoreException extends Exception {
     private static final long serialVersionUID = -806684803281289037L;
 
-    private Exception[] exceptions;
-
     /**
      * Constructs a {@code CheckpointRestoreException} with
      * an array of exceptions that caused this exception.
@@ -43,7 +41,6 @@ public class CheckpointRestoreException extends Exception {
      * @param exceptions Array of exceptions that caused this exception.
      */
     public CheckpointRestoreException(Exception[] exceptions) {
-        this.exceptions = exceptions;
     }
 
     /**
@@ -52,7 +49,7 @@ public class CheckpointRestoreException extends Exception {
      * @return Array of exceptions.
      */
     public Exception[] getExceptions() {
-        return exceptions;
+        return null;
     }
 
     /**
@@ -62,15 +59,13 @@ public class CheckpointRestoreException extends Exception {
      * @param stream Stream to print the information to.
      */
     public void printExceptions(PrintStream stream) {
-        for (int i = 0; i < exceptions.length; ++i) {
-            stream.println("  " + exceptions[i].toString());
-        }
+        throw new UnsupportedOperationException();
     }
 
     /**
      * Prints information about exceptions that caused this exception to {@code System.err}.
      */
     public void printExceptions() {
-        printExceptions(System.err);
+        throw new UnsupportedOperationException();
     }
 }
