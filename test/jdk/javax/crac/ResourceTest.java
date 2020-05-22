@@ -4,6 +4,7 @@ import javax.crac.*;
 
 /**
  * @test
+ * @compile ResourceTest.java
  */
 public class ResourceTest {
     static class CRResource implements Resource {
@@ -25,35 +26,40 @@ public class ResourceTest {
         }
 
         @Override
-        public void beforeCheckpoint() throws Exception {
+        public void beforeCheckpoint(Context<? extends Resource> context) throws Exception {
             maybeException("beforeCheckpoint");
         }
 
         @Override
-        public void afterRestore() throws Exception {
+        public void afterRestore(Context<? extends Resource> context) throws Exception {
             maybeException("afterRestore");
         }
     }
 
-    static class SingleContext implements Context {
+    static class SingleContext extends Context<Resource> {
         private Resource r;
 
         @Override
-        public void beforeCheckpoint() throws CheckpointException {
+        public void beforeCheckpoint(Context<? extends Resource> context) throws CheckpointException {
             try {
-                r.beforeCheckpoint();
+                r.beforeCheckpoint(this);
             } catch (Exception e) {
-                throw new CheckpointException(new Exception[] { e });
+                CheckpointException newException = new CheckpointException();
+                newException.addSuppressed(e);
+                throw newException;
             }
         }
 
         @Override
-        public void afterRestore() throws RestoreException {
+        public void afterRestore(Context<? extends Resource> context) throws RestoreException {
             try {
-                r.afterRestore();
+                r.afterRestore(this);
             } catch (Exception e) {
-                throw new RestoreException(new Exception[] { e });
+                RestoreException newException = new RestoreException();
+                newException.addSuppressed(e);
+                throw newException;
             }
+
         }
 
         @Override
@@ -77,9 +83,10 @@ public class ResourceTest {
         for (int i = 0; i < 2; ++i) {
             try {
                 javax.crac.Core.tryCheckpointRestore();
-            } catch (CheckpointRestoreException e) {
-                System.out.println(e);
-                e.printExceptions();
+            } catch (CheckpointException e) {
+                e.printStackTrace();
+            } catch (RestoreException e) {
+                e.printStackTrace();
             }
         }
         System.out.println("DONE");

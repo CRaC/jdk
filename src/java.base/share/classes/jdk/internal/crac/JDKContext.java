@@ -1,11 +1,11 @@
 package jdk.internal.crac;
 
-import jdk.crac.impl.Context;
+import jdk.crac.impl.AbstractContextImpl;
 
 import java.util.Comparator;
 import java.util.Map;
 
-public class JDKContext extends Context<JDKResource, Void> {
+public class JDKContext extends AbstractContextImpl<JDKResource, Void> {
     static class ContextComparator implements Comparator<Map.Entry<JDKResource, Void>> {
         @Override
         public int compare(Map.Entry<JDKResource, Void> o1, Map.Entry<JDKResource, Void> o2) {

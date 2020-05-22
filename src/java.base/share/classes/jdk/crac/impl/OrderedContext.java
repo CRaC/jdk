@@ -1,11 +1,12 @@
 package jdk.crac.impl;
 
 import jdk.crac.Resource;
+import jdk.crac.impl.AbstractContextImpl;
 
 import java.util.Comparator;
 import java.util.Map;
 
-public class OrderedContext extends Context<Resource, Long> {
+public class OrderedContext extends AbstractContextImpl<Resource, Long> {
     private long order;
 
     static class ContextComparator implements Comparator<Map.Entry<Resource, Long>> {

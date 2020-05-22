@@ -24,8 +24,9 @@
 
 package jdk.crac;
 
-public class CheckpointOpenFileException extends CheckpointOpenResourceException {
-    private static final long serialVersionUID = 0;
+public class CheckpointOpenFileException extends
+        CheckpointOpenResourceException {
+    private static final long serialVersionUID = 4696394478625532246L;
 
     CheckpointOpenFileException(String details) {
         super(details);

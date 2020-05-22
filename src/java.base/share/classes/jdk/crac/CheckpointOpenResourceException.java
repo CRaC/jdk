@@ -25,19 +25,9 @@
 package jdk.crac;
 
 public class CheckpointOpenResourceException extends Exception {
-    private static final long serialVersionUID = 0;
-
-    protected String details;
+    private static final long serialVersionUID = -3858375642480846931L;
 
     CheckpointOpenResourceException(String details) {
-        this.details = details;
-    }
-
-    public String toString() {
-        return getClass().getSimpleName() + ": " + details;
-    }
-
-    public String getDetails() {
-        return details;
+        super(details);
     }
 }

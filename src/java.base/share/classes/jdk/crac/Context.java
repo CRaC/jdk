@@ -1,11 +1,14 @@
 package jdk.crac;
 
-public interface Context<R extends Resource> extends Resource {
-    @Override
-    void beforeCheckpoint() throws CheckpointException;
+public abstract class Context<R extends Resource> implements Resource {
 
     @Override
-    void afterRestore() throws RestoreException;
+    public abstract void beforeCheckpoint(Context<? extends Resource> context)
+            throws CheckpointException;
 
-    void register(R r);
+    @Override
+    public abstract void afterRestore(Context<? extends Resource> context)
+            throws RestoreException;
+
+    public abstract void register(R resource);
 }

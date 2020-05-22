@@ -28,6 +28,8 @@ package sun.nio.ch;
 import java.io.FileDescriptor;
 import java.io.IOException;
 
+import jdk.crac.Context;
+import jdk.crac.Resource;
 import jdk.internal.access.JavaIOFileDescriptorAccess;
 import jdk.internal.access.SharedSecrets;
 import jdk.internal.crac.Core;
@@ -36,11 +38,13 @@ import jdk.internal.crac.JDKResource;
 class FileDispatcherImpl extends FileDispatcher {
     static class ResourceProxy implements JDKResource {
         @Override
-        public void beforeCheckpoint() throws InterruptedException {
+        public void beforeCheckpoint(Context<? extends Resource> context) throws Exception {
             FileDispatcherImpl.beforeCheckpoint();
         }
+
         @Override
-        public void afterRestore() throws IOException {
+        public void afterRestore(Context<? extends Resource> context)
+                throws IOException {
             FileDispatcherImpl.afterRestore();
         }
 

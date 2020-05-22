@@ -26,6 +26,8 @@ package java.net;
 
 import java.io.IOException;
 
+import jdk.crac.Context;
+import jdk.crac.Resource;
 import jdk.internal.crac.Core;
 import jdk.internal.crac.JDKResource;
 
@@ -39,11 +41,12 @@ class PlainSocketImpl extends AbstractPlainSocketImpl
 {
     static class ResourceProxy implements JDKResource {
         @Override
-        public void beforeCheckpoint() throws InterruptedException {
+        public void beforeCheckpoint(Context<? extends Resource> context) throws Exception {
             PlainSocketImpl.beforeCheckpoint();
         }
+
         @Override
-        public void afterRestore() {
+        public void afterRestore(Context<? extends Resource> context) throws Exception {
             PlainSocketImpl.afterRestore();
         }
 

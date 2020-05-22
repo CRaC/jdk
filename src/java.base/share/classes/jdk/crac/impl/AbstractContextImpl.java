@@ -23,6 +23,7 @@
 package jdk.crac.impl;
 
 import jdk.crac.CheckpointException;
+import jdk.crac.Context;
 import jdk.crac.Resource;
 import jdk.crac.RestoreException;
 
@@ -31,19 +32,19 @@ import java.security.PrivilegedAction;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public abstract class Context<R extends Resource, P> implements jdk.crac.Context<R> {
+public abstract class AbstractContextImpl<R extends Resource, P> extends Context<R> {
     private static final boolean DEBUG = AccessController.doPrivileged(
             new PrivilegedAction<Boolean>() {
                 public Boolean run() {
                     return Boolean.parseBoolean(
-                            System.getProperty("jdk.crac.ResourceManager.debug"));
+                            System.getProperty("jdk.crac.debug"));
                 }});
 
     private WeakHashMap<R, P> checkpointQ = new WeakHashMap<>();
     private List<R> restoreQ = null;
     private Comparator<Map.Entry<R, P>> comparator;
 
-    protected Context(Comparator<Map.Entry<R, P>> comparator) {
+    protected AbstractContextImpl(Comparator<Map.Entry<R, P>> comparator) {
         this.comparator = comparator;
     }
 
@@ -52,19 +53,19 @@ public abstract class Context<R extends Resource, P> implements jdk.crac.Context
     }
 
     @Override
-    public synchronized void beforeCheckpoint() throws CheckpointException {
+    public synchronized void beforeCheckpoint(Context<? extends Resource> context) throws CheckpointException {
         List<R> resources = checkpointQ.entrySet().stream()
             .sorted(comparator)
-            .map(e -> e.getKey())
+            .map(Map.Entry::getKey)
             .collect(Collectors.toList());
 
         ArrayList<Exception> exceptions = new ArrayList<>();
         for (Resource r : resources) {
             if (DEBUG) {
-                System.err.println("jdk.crac.ResourceManager beforeCheckpoint " + r.toString());
+                System.err.println("jdk.crac beforeCheckpoint " + r.toString());
             }
             try {
-                r.beforeCheckpoint();
+                r.beforeCheckpoint(this);
             } catch (Exception e) {
                 exceptions.add(e);
             }
@@ -74,19 +75,23 @@ public abstract class Context<R extends Resource, P> implements jdk.crac.Context
         restoreQ = resources;
 
         if (0 < exceptions.size()) {
-            throw new CheckpointException(exceptions.toArray(new Exception[exceptions.size()]));
+            CheckpointException newException = new CheckpointException();
+            for (Exception e : exceptions) {
+                newException.addSuppressed(e);
+            }
+            throw newException;
         }
     }
 
     @Override
-    public synchronized void afterRestore() throws RestoreException {
+    public synchronized void afterRestore(Context<? extends Resource> context) throws RestoreException {
         ArrayList<Exception> exceptions = new ArrayList<>();
         for (Resource r : restoreQ) {
             if (DEBUG) {
-                System.err.println("jdk.crac.ResourceManager afterRestore " + r.toString());
+                System.err.println("jdk.crac afterRestore " + r.toString());
             }
             try {
-                r.afterRestore();
+                r.afterRestore(this);
             } catch (Exception e) {
                 exceptions.add(e);
             }
@@ -94,7 +99,11 @@ public abstract class Context<R extends Resource, P> implements jdk.crac.Context
         restoreQ = null;
 
         if (0 < exceptions.size()) {
-            throw new RestoreException(exceptions.toArray(new Exception[exceptions.size()]));
+            RestoreException newException = new RestoreException();
+            for (Exception e : exceptions) {
+                newException.addSuppressed(e);
+            }
+            throw newException;
         }
     }
 }

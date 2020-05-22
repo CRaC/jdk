@@ -38,37 +38,35 @@ public class Core {
 
     private static native Object[] tryCheckpointRestore0();
 
-    private static Context<Resource> globalContext = new OrderedContext();
+    private static final Context<Resource> globalContext = new OrderedContext();
     static {
         // force JDK context initialization
         jdk.internal.crac.Core.getJDKContext();
     }
 
-    private static Exception[] translateJVMExceptions(int[] codes, String[] messages) {
+    private static void translateJVMExceptions(int[] codes, String[] messages,
+                                               CheckpointException newException) {
         assert codes.length == messages.length;
         final int length = codes.length;
 
-        Exception[] jvmExceptions = new Exception[length];
-
         for (int i = 0; i < length; ++i) {
-            Exception e = null;
             switch(codes[i]) {
                 case JVM_CR_FAIL_FILE:
-                    e = new CheckpointOpenFileException(messages[i]);
+                    newException.addSuppressed(
+                            new CheckpointOpenFileException(messages[i]));
                     break;
                 case JVM_CR_FAIL_SOCK:
-                    e = new CheckpointOpenSocketException(messages[i]);
+                    newException.addSuppressed(
+                            new CheckpointOpenSocketException(messages[i]));
                     break;
                 case JVM_CR_FAIL_PIPE:
                     // FALLTHROUGH
                 default:
-                    e = new CheckpointOpenResourceException(messages[i]);
+                    newException.addSuppressed(
+                            new CheckpointOpenResourceException(messages[i]));
                     break;
             }
-            jvmExceptions[i] = e;
         }
-
-        return jvmExceptions;
     }
 
     public static Context<Resource> getGlobalContext() {
@@ -80,55 +78,53 @@ public class Core {
             RestoreException {
 
         try {
-            globalContext.beforeCheckpoint();
+            globalContext.beforeCheckpoint(null);
         } catch (CheckpointException ce) {
             try {
-                globalContext.afterRestore();
+                globalContext.afterRestore(null);
             } catch (RestoreException re) {
-                Exception[] throwExceptions = new Exception[ce.getExceptions().length + re.getExceptions().length];
-                System.arraycopy(ce.getExceptions(), 0,
-                    throwExceptions, 0,
-                    ce.getExceptions().length);
-                System.arraycopy(re.getExceptions(), 0,
-                    throwExceptions, ce.getExceptions().length,
-                    re.getExceptions().length);
-                throw new CheckpointException(throwExceptions);
+                CheckpointException newException = new CheckpointException();
+                for (Throwable t : ce.getSuppressed()) {
+                    newException.addSuppressed(t);
+                }
+                for (Throwable t : re.getSuppressed()) {
+                    newException.addSuppressed(t);
+                }
+                throw newException;
             }
             throw ce;
         }
 
         final Object[] bundle = tryCheckpointRestore0();
-        final int retCode = ((Integer)bundle[0]).intValue();
+        final int retCode = (Integer)bundle[0];
         final int[] codes = (int[])bundle[1];
         final String[] messages = (String[])bundle[2];
 
         if (retCode != JVM_CHECKPOINT_OK) {
-            Exception[] prependExceptions;
+            CheckpointException newException = new CheckpointException();
             switch (retCode) {
-                case JVM_CHECKPOINT_NONE:
-                    prependExceptions = new Exception[] { new RuntimeException("C/R is not configured") };
-                    break;
                 case JVM_CHECKPOINT_ERROR:
-                    prependExceptions = translateJVMExceptions(codes, messages);
+                    translateJVMExceptions(codes, messages, newException);
+                    break;
+                case JVM_CHECKPOINT_NONE:
+                    newException.addSuppressed(
+                            new RuntimeException("C/R is not configured"));
                     break;
                 default:
-                    prependExceptions = new Exception[]{ new RuntimeException("Unknown C/R result: " + retCode) };
+                    newException.addSuppressed(
+                            new RuntimeException("Unknown C/R result: " + retCode));
             }
 
             try {
-                globalContext.afterRestore();
+                globalContext.afterRestore(null);
             } catch (RestoreException re) {
-                Exception[] throwExceptions = new Exception[prependExceptions.length + re.getExceptions().length];
-                System.arraycopy(prependExceptions, 0, throwExceptions, 0, prependExceptions.length);
-                System.arraycopy(re.getExceptions(), 0,
-                    throwExceptions, prependExceptions.length,
-                    re.getExceptions().length);
-                throw new CheckpointException(throwExceptions);
+                for (Throwable t : re.getSuppressed()) {
+                    newException.addSuppressed(t);
+                }
             }
-
-            throw new CheckpointException(prependExceptions);
+            throw newException;
         }
 
-        globalContext.afterRestore();
+        globalContext.afterRestore(null);
     }
 }

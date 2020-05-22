@@ -70,6 +70,7 @@ import java.util.jar.Attributes;
 import java.util.jar.Attributes.Name;
 import java.util.zip.ZipFile;
 
+import jdk.crac.Context;
 import jdk.internal.access.JavaNetURLAccess;
 import jdk.internal.access.JavaUtilZipFileAccess;
 import jdk.internal.access.SharedSecrets;
@@ -815,7 +816,7 @@ public class URLClassPath {
             }
 
             @Override
-            public void beforeCheckpoint() {
+            public void beforeCheckpoint(Context<? extends jdk.crac.Resource> context) {
                 try {
                     Method zipBeforeCheckpoint = ZipFile.class.getDeclaredMethod("beforeCheckpoint");
                     AccessController.doPrivileged(new PrivilegedAction<Void>() {
@@ -830,7 +831,7 @@ public class URLClassPath {
             }
 
             @Override
-            public void afterRestore() {
+            public void afterRestore(Context<? extends jdk.crac.Resource> context) {
                 // do nothing, no fixup required
             }
 

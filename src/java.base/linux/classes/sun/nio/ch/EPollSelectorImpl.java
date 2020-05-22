@@ -25,6 +25,7 @@
 
 package sun.nio.ch;
 
+import jdk.crac.Context;
 import jdk.crac.Resource;
 import jdk.internal.crac.JDKResource;
 
@@ -355,7 +356,7 @@ class EPollSelectorImpl extends SelectorImpl implements JDKResource {
     }
 
     @Override
-    public void beforeCheckpoint() throws Exception {
+    public void beforeCheckpoint(Context<? extends Resource> context) throws Exception {
         if (!isOpen()) {
             return;
         }
@@ -388,7 +389,7 @@ class EPollSelectorImpl extends SelectorImpl implements JDKResource {
     }
 
     @Override
-    public void afterRestore() throws Exception {
+    public void afterRestore(Context<? extends Resource> context) throws Exception {
         if (!isOpen()) {
             return;
         }

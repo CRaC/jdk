@@ -26,10 +26,7 @@ package jdk.crac;
 
 public interface Resource {
 
-    void beforeCheckpoint() throws Exception;
+    void beforeCheckpoint(Context<? extends Resource> context) throws Exception;
 
-    // afterRestore will be called regardless succsess or failure of checkpoint:
-    // Contexts need to be notified to passthrough to the contained resources.
-
-    void afterRestore() throws Exception;
+    void afterRestore(Context<? extends Resource> context) throws Exception;
 }

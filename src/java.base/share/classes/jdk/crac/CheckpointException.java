@@ -24,10 +24,6 @@
 
 package jdk.crac;
 
-public class CheckpointException extends CheckpointRestoreException {
-    private static final long serialVersionUID = 0;
-
-    public CheckpointException(Exception[] exceptions) {
-        super(exceptions);
-    }
+public class CheckpointException extends Exception {
+    private static final long serialVersionUID = 8879167591426115859L;
 }

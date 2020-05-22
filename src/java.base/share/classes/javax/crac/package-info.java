@@ -21,13 +21,18 @@
  * have any questions.
  */
 
-package javax.crac;
-
 /**
- * Thrown if {@code Resource}s threw during checkpoint notification or if
- * platform-dependent checks have are failed. Exceptions and check failures are
- * recorded as suppressed exceptions of this exception.
+ * Provides interface for interacting with checkpoint/restore.
+ *
+ * <ul>
+ * <li>{@link Core} allows to request checkpoint/restore and register for
+ * notification.
+ * </li>
+ * <li>{@link Resource} and {@link Context} are interfaces for
+ * notification.
+ * </li>
+ * </ul>
+ *
+ * @since 15
  */
-public class CheckpointException extends Exception {
-    private static final long serialVersionUID = 6859967688386143096L;
-}
+package javax.crac;
