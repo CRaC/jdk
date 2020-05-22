@@ -21,30 +21,18 @@
  * have any questions.
  */
 
-package javax.crac;
-
 /**
- * A group of {@code Resource}s. Distributes notifications between the
- * group.
+ * Provides interface for interacting with checkpoint/restore.
+ *
+ * <ul>
+ * <li>{@link Core} allows to request checkpoint/restore and register for
+ * notification.
+ * </li>
+ * <li>{@link Resource} and {@link Context} are interfaces for
+ * notification.
+ * </li>
+ * </ul>
+ *
+ * @since 15
  */
-public abstract class Context<R extends Resource> implements Resource {
-    @Override
-    public void beforeCheckpoint() throws CheckpointException {
-        throw new RuntimeException("unimplemented");
-    }
-
-    @Override
-    public void afterRestore() throws RestoreException {
-        throw new RuntimeException("unimplemented");
-    }
-
-    /**
-     * Registers a {@code Resource} in this {@code Context}. The {@code Context}
-     * will maintain weak reference on the {@code Resource}.
-     *
-     * @param resource {@code Resource} to be registered.
-     */
-    void register(R resource) {
-        throw new RuntimeException("unimplemented");
-    }
-}
+package javax.crac;
