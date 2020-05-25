@@ -27,15 +27,14 @@ package javax.crac;
  * Core interface to checkpoint/restore subsystem.
  */
 public class Core {
-    static class NullContext implements Context<Resource> {
-
+    static class NullContext extends Context<Resource> {
         @Override
-        public void beforeCheckpoint() throws CheckpointException {
+        public void beforeCheckpoint(Context<? extends Resource> context) throws CheckpointException {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void afterRestore() throws RestoreException {
+        public void afterRestore(Context<? extends Resource> context) throws RestoreException {
             throw new UnsupportedOperationException();
         }
 

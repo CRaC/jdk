@@ -32,6 +32,7 @@ public interface Resource {
      * Called by a {@code Context} in transition to checkpoint. The calling
      * {@code Context} is provided as an argument.
      *
+     * @param context {@code Context} calling the method
      * @throws Exception if the method failed
      */
     void beforeCheckpoint(Context<? extends Resource> context) throws Exception;
@@ -40,6 +41,7 @@ public interface Resource {
      * Called in transition from checkpoint to normal state. The calling
      * {@code Context} is passed as an argument.
      *
+     * @param context {@code Context} calling the method
      * @throws Exception if the method failed
      */
     void afterRestore(Context<? extends Resource> context) throws Exception;

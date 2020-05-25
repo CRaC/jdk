@@ -28,15 +28,14 @@ package javax.crac;
  * group.
  */
 public abstract class Context<R extends Resource> implements Resource {
-    @Override
-    public void beforeCheckpoint() throws CheckpointException {
-        throw new RuntimeException("unimplemented");
-    }
 
     @Override
-    public void afterRestore() throws RestoreException {
-        throw new RuntimeException("unimplemented");
-    }
+    public abstract void beforeCheckpoint(Context<? extends Resource> context)
+            throws CheckpointException;
+
+    @Override
+    public abstract void afterRestore(Context<? extends Resource> context)
+            throws RestoreException;
 
     /**
      * Registers a {@code Resource} in this {@code Context}. The {@code Context}
@@ -44,7 +43,5 @@ public abstract class Context<R extends Resource> implements Resource {
      *
      * @param resource {@code Resource} to be registered.
      */
-    void register(R resource) {
-        throw new RuntimeException("unimplemented");
-    }
+    public abstract void register(R resource);
 }
