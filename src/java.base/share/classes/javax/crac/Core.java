@@ -28,7 +28,7 @@ package javax.crac;
  */
 public class Core {
     /**
-     * Gets the global {@link Context}. {@code Resource}s registered in this
+     * Gets the global {@code Context}. {@code Resource}s registered in this
      * context for checkpoint will be notified in reverse order of registration
      * and for restore in reverse order of checkpoint notification
      * (forward order of registration).
