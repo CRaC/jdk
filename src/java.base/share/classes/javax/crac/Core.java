@@ -27,25 +27,6 @@ package javax.crac;
  * Core interface to checkpoint/restore subsystem.
  */
 public class Core {
-    static class NullContext extends Context<Resource> {
-        @Override
-        public void beforeCheckpoint(Context<? extends Resource> context) throws CheckpointException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void afterRestore(Context<? extends Resource> context) throws RestoreException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void register(Resource resource) {
-            // Do nothing
-        }
-    }
-
-    private static final Context<Resource> nullContext = new NullContext();
-
     /**
      * Gets the global {@link Context}. {@code Resource}s registered in this
      * context for checkpoint will be notified in reverse order of registration
@@ -55,7 +36,7 @@ public class Core {
      * @return the global {@code Context}
      */
     public static Context<Resource> getGlobalContext() {
-        return nullContext;
+        return null;
     }
 
     /**
