@@ -672,6 +672,9 @@
   template(toFileURL_signature,                    "(Ljava/lang/String;)Ljava/net/URL;")                          \
   template(url_void_signature,                     "(Ljava/net/URL;)V")                                           \
                                                                                                                   \
+  template(javax_crac_Core,                        "javax/crac/Core")                                             \
+  template(tryCheckpointRestoreInternal_name,      "tryCheckpointRestoreInternal")                                \
+                                                                                                                  \
   /*end*/
 
 // Here are all the intrinsics known to the runtime and the CI.

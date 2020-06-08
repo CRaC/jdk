@@ -2226,7 +2226,7 @@ const size_t minimumSymbolTableSize = 1024;
                                                                             \
   /* flags for performance data collection */                               \
                                                                             \
-  product(bool, UsePerfData, false,                                         \
+  product(bool, UsePerfData, true,                                          \
           "Flag to disable jvmstat instrumentation for performance testing "\
           "and problem isolation purposes")                                 \
                                                                             \

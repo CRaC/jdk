@@ -6698,6 +6698,9 @@ static const char* sock_details(const char* details, char* buf, size_t sz) {
 
 
 void VM_Crac::doit() {
+
+  AttachListener::abort();
+
   FdsInfo fds;
   do_classpaths(mark_classpath_entry, &fds, Arguments::get_sysclasspath());
   do_classpaths(mark_classpath_entry, &fds, Arguments::get_appclasspath());
@@ -6859,8 +6862,12 @@ Handle os::Linux::checkpoint(TRAPS) {
   Universe::heap()->set_cleanup_unused(true);
   Universe::heap()->collect(GCCause::_full_gc_alot);
   Universe::heap()->set_cleanup_unused(false);
+
   VM_Crac cr;
-  VMThread::execute(&cr);
+  {
+    MutexLocker ml(Heap_lock);
+    VMThread::execute(&cr);
+  }
   if (cr.ok()) {
     return ret_cr(JVM_CHECKPOINT_OK, THREAD);
   }

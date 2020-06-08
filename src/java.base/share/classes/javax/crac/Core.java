@@ -86,4 +86,24 @@ public class Core {
             throw newException;
         }
     }
+
+    /* called by VM */
+    private static void tryCheckpointRestoreInternal() {
+        Thread thread = new Thread(() -> {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+            }
+
+            try {
+                tryCheckpointRestore();
+            } catch (CheckpointException | RestoreException e) {
+                for (Throwable t : e.getSuppressed()) {
+                    t.printStackTrace();
+                }
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
+    }
 }
