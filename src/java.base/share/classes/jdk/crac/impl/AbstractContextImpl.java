@@ -59,52 +59,51 @@ public abstract class AbstractContextImpl<R extends Resource, P> extends Context
             .map(Map.Entry::getKey)
             .collect(Collectors.toList());
 
-        ArrayList<Exception> exceptions = new ArrayList<>();
+        CheckpointException exception = new CheckpointException();
         for (Resource r : resources) {
             if (DEBUG) {
                 System.err.println("jdk.crac beforeCheckpoint " + r.toString());
             }
-            // TODO handel CheckpointException, re-suppress
             try {
                 r.beforeCheckpoint(this);
+            } catch (CheckpointException e) {
+                for (Throwable t : e.getSuppressed()) {
+                    exception.addSuppressed(t);
+                }
             } catch (Exception e) {
-                exceptions.add(e);
+                exception.addSuppressed(e);
             }
         }
 
         Collections.reverse(resources);
         restoreQ = resources;
 
-        if (0 < exceptions.size()) {
-            CheckpointException newException = new CheckpointException();
-            for (Exception e : exceptions) {
-                newException.addSuppressed(e);
-            }
-            throw newException;
+        if (0 < exception.getSuppressed().length) {
+            throw exception;
         }
     }
 
     @Override
     public synchronized void afterRestore(Context<? extends Resource> context) throws RestoreException {
-        ArrayList<Exception> exceptions = new ArrayList<>();
+        RestoreException exception = new RestoreException();
         for (Resource r : restoreQ) {
             if (DEBUG) {
                 System.err.println("jdk.crac afterRestore " + r.toString());
             }
             try {
                 r.afterRestore(this);
+            } catch (RestoreException e) {
+                for (Throwable t : e.getSuppressed()) {
+                    exception.addSuppressed(t);
+                }
             } catch (Exception e) {
-                exceptions.add(e);
+                exception.addSuppressed(e);
             }
         }
         restoreQ = null;
 
-        if (0 < exceptions.size()) {
-            RestoreException newException = new RestoreException();
-            for (Exception e : exceptions) {
-                newException.addSuppressed(e);
-            }
-            throw newException;
+        if (0 < exception.getSuppressed().length) {
+            throw exception;
         }
     }
 }

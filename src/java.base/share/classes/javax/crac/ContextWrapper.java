@@ -20,10 +20,9 @@ class ContextWrapper extends Context<Resource> {
         try {
             this.context.beforeCheckpoint(convertContext(context));
         } catch (jdk.crac.CheckpointException e) {
-            Throwable[] throwables = e.getSuppressed();
             CheckpointException newException = new CheckpointException();
-            for (int i = 0; i < throwables.length; ++i) {
-                newException.addSuppressed(throwables[i]);
+            for (Throwable t : e.getSuppressed()) {
+                newException.addSuppressed(t);
             }
             throw newException;
         }
@@ -35,10 +34,9 @@ class ContextWrapper extends Context<Resource> {
         try {
             this.context.afterRestore(convertContext(context));
         } catch (jdk.crac.RestoreException e) {
-            Throwable[] throwables = e.getSuppressed();
             RestoreException newException = new RestoreException();
-            for (int i = 0; i < throwables.length; ++i) {
-                newException.addSuppressed(throwables[i]);
+            for (Throwable t : e.getSuppressed()) {
+                newException.addSuppressed(t);
             }
             throw newException;
         }
