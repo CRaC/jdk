@@ -21,13 +21,13 @@ jobs:
 
     - run: bash ./configure --disable-warnings-as-errors --with-native-debug-symbols=none
     - run: |
-        make docs #images docs
-        #mv build/linux-x86_64-server-release/images/jdk .
+        make images docs
+        mv build/linux-x86_64-server-release/images/jdk .
         mv build/linux-x86_64-server-release/images/docs .
-    #- run: |
-        #cp criu-dist/sbin/criu jdk/lib/criu
-        #sudo chown root:root jdk/lib/criu
-        #sudo chmod u+s jdk/lib/criu
+    - run: |
+        cp criu-dist/sbin/criu jdk/lib/criu
+        sudo chown root:root jdk/lib/criu
+        sudo chmod u+s jdk/lib/criu
 
     - name: Compute release name
       id: release
@@ -51,17 +51,17 @@ jobs:
         draft: false
         prerelease: false
 
-    #- run: tar -zcf jdk.tar.gz jdk
-    #- name: Upload JDK
-      #id: upload-jdk
-      #uses: actions/upload-release-asset@v1
-      #env:
-        #GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #with:
-        #upload_url: ${{ steps.create_release.outputs.upload_url }}
-        #asset_path: ./jdk.tar.gz
-        #asset_name: jdk.tar.gz
-        #asset_content_type: application/gzip
+    - run: tar -zcf jdk.tar.gz jdk
+    - name: Upload JDK
+      id: upload-jdk
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./jdk.tar.gz
+        asset_name: jdk.tar.gz
+        asset_content_type: application/gzip
 
     - run: zip -qr docs.zip docs
     - name: Upload Docs
