@@ -80,6 +80,7 @@ public class Core {
         try {
             globalContext.beforeCheckpoint(null);
         } catch (CheckpointException ce) {
+            // TODO make dry-run
             try {
                 globalContext.afterRestore(null);
             } catch (RestoreException re) {

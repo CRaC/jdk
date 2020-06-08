@@ -24,11 +24,17 @@
 package javax.crac;
 
 /**
- * Thrown if {@code Resource}s threw during restore notification. Exceptions are
- * recorded as suppressed exceptions of this exception.
+ * Suppresses exceptions thrown during restore notification.
  */
 public class RestoreException extends Exception {
     private static final long serialVersionUID = -4091592505524280559L;
+
+    /**
+     * Creates a {@code RestoreException}.
+     */
+    public RestoreException() {
+        super();
+    }
 }
 
 

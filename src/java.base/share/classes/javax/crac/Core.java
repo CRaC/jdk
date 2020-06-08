@@ -29,16 +29,18 @@ import jdk.crac.impl.OrderedContext;
  * Core interface to checkpoint/restore subsystem.
  */
 public class Core {
+
+    /** This class is not instantiable. */
+    private Core() {
+    }
+
     private static final Context<Resource> globalContext = new ContextWrapper(new OrderedContext());
     static {
         jdk.crac.Core.getGlobalContext().register(new ResourceWrapper(null, globalContext));
     }
 
     /**
-     * Gets the global {@code Context}. {@code Resource}s registered in this
-     * context for checkpoint will be notified in reverse order of registration
-     * and for restore in reverse order of checkpoint notification
-     * (forward order of registration).
+     * Gets the global {@code Context}.
      *
      * @return the global {@code Context}
      */
@@ -48,23 +50,10 @@ public class Core {
 
     /**
      * Performs checkpoint/restore sequence.
-     * <ul>
-     * <li>{@code Resource}s registered in the global {@code Context} are
-     * notified about transition to checkpoint.
-     * </li>
-     * <li>A set of platform-dependent checks are made and
-     * implementation-specific and configuration-specific actions may be
-     * performed.
-     * </li>
-     * <li>{@code Resource}s are notified about restore.
-     * </li>
-     * </ul>
      *
      * @throws CheckpointException if some {@code Resource}s threw during
      * checkpoint notification
-     * @throws CheckpointException if some of platform-dependent checks are
-     * failed
-     * @throws RestoreException if some {@code Resource]}s threw during restore
+     * @throws RestoreException if some {@code Resource}s threw during restore
      * notification
      */
     public static void tryCheckpointRestore() throws

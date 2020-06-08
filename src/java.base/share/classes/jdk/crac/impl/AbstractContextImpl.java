@@ -64,6 +64,7 @@ public abstract class AbstractContextImpl<R extends Resource, P> extends Context
             if (DEBUG) {
                 System.err.println("jdk.crac beforeCheckpoint " + r.toString());
             }
+            // TODO handel CheckpointException, re-suppress
             try {
                 r.beforeCheckpoint(this);
             } catch (Exception e) {

@@ -24,25 +24,27 @@
 package javax.crac;
 
 /**
- * A listener interface for checkpoint/restore events
+ * An interface for receiving checkpoint/restore notifications.
+ *
+ * <p>The class that is interested in receiving a checkpoint/restore notification
+ * implements this interface, and the object created with that class is
+ * registered with a {@code Context}, using {@code register} method.
  */
 public interface Resource {
 
     /**
-     * Called by a {@code Context} in transition to checkpoint. The calling
-     * {@code Context} is provided as an argument.
+     * Invoked by a {@code Context} as a notification about checkpoint.
      *
-     * @param context {@code Context} calling the method
-     * @throws Exception if the method failed
+     * @param context {@code Context} providing notification <span style="color:red">Follows {@link java.util.function.BiConsumer}</span>
+     * @throws Exception if the method have failed <span style="color:red">Follows {@link java.util.concurrent.Callable}</span>
      */
     void beforeCheckpoint(Context<? extends Resource> context) throws Exception;
 
     /**
-     * Called in transition from checkpoint to normal state. The calling
-     * {@code Context} is passed as an argument.
+     * Invoked by a {@code Context} as a notification about restore.
      *
-     * @param context {@code Context} calling the method
-     * @throws Exception if the method failed
+     * @param context {@code Context} providing notification
+     * @throws Exception if the method have failed
      */
     void afterRestore(Context<? extends Resource> context) throws Exception;
 }
