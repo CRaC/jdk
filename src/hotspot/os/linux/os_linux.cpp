@@ -6782,10 +6782,17 @@ void VM_Crac::doit() {
     return;
   }
 
-  int ret = checkpoint_restore(&fds);
-  if (ret == JVM_CHECKPOINT_ERROR) {
+  if (!PerfMemory::checkpoint()) {
     return;
   }
+
+  int ret = checkpoint_restore(&fds);
+  if (ret == JVM_CHECKPOINT_ERROR) {
+    PerfMemory::checkpoint_fail();
+    return;
+  }
+
+  PerfMemory::restore();
 
   _ok = true;
 }
@@ -6936,7 +6943,7 @@ int os::Linux::restore() {
   const char* crdir = Arguments::crdir();
   const char* criu = Arguments::criu();
 
-  tty->print_cr("STARTUPTIME %lld criu-call", os::javaTimeNanos());
+  tty->print_cr("STARTUPTIME " JLONG_FORMAT " criu-call", os::javaTimeNanos());
 
   int ret = execlp(/*file*/criu, /*args follow*/
       criu, "restore",
