@@ -22,33 +22,33 @@
  */
 
 /**
- * Provides an interface for the checkpoint/restore function.
+ * Provides checkpoint/restore service.
  *
- * <p>The checkpoint/restore allows to create an image out of the current Java Runtime instance and its state.
+ * <p>The checkpoint/restore allows to create an image of the current Java Runtime instance and its state.
  * New instances can be created from the image, restoring at the point of checkpoint.
  *
- * <p>Notification about checkpoint or restore allows to manage resources that cannot be stored in the image.
+ * <p>Notifications about checkpoint and restore are used for management of resources that cannot be stored in the image.
  *
  * <ul>
- * <li>{@link Core} allows to request checkpoint/restore and provides register for notification.
+ * <li>{@link Resource} is an interface for receiving checkpoint/restore notifications.
  * </li>
- * <li>{@link Resource} is interface for notification.
- * </li>
- * <li>{@link Context} is used to group {@code Resource}s by their semantic.
+ * <li>{@link Context} is a group of {@code Resource}s.
  * </li>
  * <li>{@link CheckpointException} and {@link RestoreException} are used to report checkpoint or restore problems.
  * </li>
+ * <li>{@link Core} is a Java Runtime interface, it enables to initiate checkpoint/restore and provides a way to register for notifications.
+ * </li>
  * </ul>
  *
- * {@code beforeCheckpoint} and {@code afterRestore} methods of {@code Resource} are invoked as a notification for checkpoint and restore, respectively.
+ * {@code beforeCheckpoint} and {@code afterRestore} methods of {@code Resource} are invoked as a notification before checkpoint and after restore, respectively.
  * A {@code Resource} may be incapable to perform action associated with notification, in this case one of the methods throws an exception.
  *
  * <p>A {@code Context} is a {@code Resource}, that allows other {@code Resource}s to be registered with it.
- * A class may extend {@code Context} and by overwriting {@code beforeCheckpoint} and {@code afterRestore} define custom rules of notification processing, such as order of notification.
+ * A class may extend {@code Context} and define custom rules of notification processing, such as order of notification, by overwriting {@code beforeCheckpoint} and {@code afterRestore} methods.
  * A {@code Context} may be registered with other {@code Context}, forming {@code Context} hierarchy.
  *
- * <p>Java Standard Library maintains a global {@code Context}, that receives notification about checkpoint/restore from the system and distributes it by the hierarchy.
- * The global {@code Context} properties are:
+ * <p>Java Runtime maintains a global {@code Context} that is first to receive notifications about checkpoint/restore.
+ * The global {@code Context} has the following properties:
  * <ul>
  * <li>All {@code Resource}s registered in the global {@code Context} are notified about checkpoint.
  * </li>

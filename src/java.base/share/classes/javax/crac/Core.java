@@ -26,7 +26,7 @@ package javax.crac;
 import jdk.crac.impl.OrderedContext;
 
 /**
- * Core interface to checkpoint/restore subsystem.
+ * Runtime interface to checkpoint/restore service.
  */
 public class Core {
 
