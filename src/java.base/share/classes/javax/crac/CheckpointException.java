@@ -24,10 +24,15 @@
 package javax.crac;
 
 /**
- * Thrown if {@code Resource}s threw during checkpoint notification or if
- * platform-dependent checks have are failed. Exceptions and check failures are
- * recorded as suppressed exceptions of this exception.
+ * Suppresses exceptions thrown during checkpoint notification.
  */
 public class CheckpointException extends Exception {
     private static final long serialVersionUID = 6859967688386143096L;
+
+    /**
+     * Creates a {@code CheckpointException}.
+     */
+    public CheckpointException() {
+        super();
+    }
 }
