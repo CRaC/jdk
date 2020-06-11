@@ -35,8 +35,8 @@ public interface Resource {
     /**
      * Invoked by a {@code Context} as a notification about checkpoint.
      *
-     * @param context {@code Context} providing notification <span style="color:red">Follows {@link java.util.function.BiConsumer}</span>
-     * @throws Exception if the method have failed <span style="color:red">Follows {@link java.util.concurrent.Callable}</span>
+     * @param context {@code Context} providing notification
+     * @throws Exception if the method have failed
      */
     void beforeCheckpoint(Context<? extends Resource> context) throws Exception;
 
