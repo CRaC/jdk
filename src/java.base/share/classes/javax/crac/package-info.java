@@ -23,69 +23,62 @@
 
 /**
  * Provides checkpoint/restore service.
- *
- * <p>The checkpoint/restore allows to create an image of the current Java Runtime instance and its state.
- * New instances can be created from the image, restoring at the point of checkpoint.
- *
- * <p>Notifications about checkpoint and restore are used for management of resources that cannot be stored in the image.
- *
+ * The checkpoint/restore allows to create an image of the current Java Runtime instance and its state.
+ * New instances can be created from the image, restoring at the checkpoint.
+ * <p>
+ * {@link Resource} is an interface for receiving checkpoint/restore notifications, used for management of resources that cannot be stored in the image.
+ * In order to be notified, {@code Resource} needs to be registered in a {@link Context}.
+ * {@link Core} is a Java Runtime interface to checkpoint/restore service, it provides the global {@code Context} which can be used as default choice.
+ * The global {@code Context} have properties listed below, one can define a custom {@code Context} and register it with the global one.
+ * {@code Core} has also a method to request checkpoint, which returns in a new restored instance of Java.
+ * <p>
+ * Methods of {@code Resource} are invoked as a notification of checkpoint and restore.
+ * If a {@code Resource} is incapable to process notification, corresponding method throws an exception.
+ * The global {@code Context} ensures that exceptions are propagated to a requester of checkpoint/restore.
+ * <p>
+ * {@code Context} is a {@code Resource}, that allows other {@code Resource}s to be registered with it.
+ * {@code Context} defines how {@code Resource}s are notified and may provide different guarantees compared to the global {@code Context}, such as order of notification.
+ * A class may extend {@code Context} and define custom rules of notification processing by overriding {@code Resource} method.
+ * Since a {@code Context} may be registered with other {@code Context}, they form a {@code Context} hierarchy.
+ * <p>
+ * Checkpoint is requested by the method of the {@code Core}.
+ * Checkpoint notification of the global {@code Context} is performed.
+ * If the global {@code Context} have not thrown {@code CheckpointException}, the current Java instance is used to create the image in a platform dependent way.
+ * The current instance is terminated.
+ * Later, a new instance is created by some means, for example via Java launcher in a special mode.
+ * The new instance is started at the point where the image was created, it is followed by the restore notification.
+ * Exceptions from restore notification are provided as suppressed ones by a {@code RestoreException} (in a sense of {@link Throwable#addSuppressed}).
+ * <p>
+ * If the global {@code Context} throws an exception during checkpoint notification then restore notificaion starts immediately without the image creation.
+ * In this case, exceptions from checkpoint and restore notifications are provided as suppressed ones by {@code CheckpointException}.
+ * <p>
+ * The global {@code Context} may have additional {@code Resource}s registered by the implementation, which may also throw during checkpoint notification.
+ * <h2>Global Context Properties</h2>
+ * Java Runtime maintains the global {@code Context} with following properties.
+ * An implementor is encouraged to define {@code Context} with the properties of the global {@code Context}.
  * <ul>
- * <li>{@link Resource} is an interface for receiving checkpoint/restore notifications.
- * </li>
- * <li>{@link Context} is a group of {@code Resource}s.
- * </li>
- * <li>{@link CheckpointException} and {@link RestoreException} are used to report checkpoint or restore problems.
- * </li>
- * <li>{@link Core} is a Java Runtime interface, it enables to initiate checkpoint/restore and provides a way to register for notifications.
- * </li>
- * </ul>
- *
- * {@code beforeCheckpoint} and {@code afterRestore} methods of {@code Resource} are invoked as a notification before checkpoint and after restore, respectively.
- * A {@code Resource} may be incapable to perform action associated with notification, in this case one of the methods throws an exception.
- *
- * <p>A {@code Context} is a {@code Resource}, that allows other {@code Resource}s to be registered with it.
- * A class may extend {@code Context} and define custom rules of notification processing, such as order of notification, by overwriting {@code beforeCheckpoint} and {@code afterRestore} methods.
- * A {@code Context} may be registered with other {@code Context}, forming {@code Context} hierarchy.
- *
- * <p>Java Runtime maintains a global {@code Context} that is first to receive notifications about checkpoint/restore.
- * The global {@code Context} has the following properties:
- * <ul>
- * <li>All {@code Resource}s registered in the global {@code Context} are notified about checkpoint.
+ * <li>The {@code Context} maintains a weak reference to registered {@code Resource}.
  * </li>
  * <li>Order of checkpoint notification is the reverse order of registration.
- * Restore notification order is reverse of the checkpoint one, that is, forward order of registration.
+ * Restore notification order is the reverse of checkpoint one, that is, forward order of registration.
  * </li>
- * <li>For a single {@code Resource}, {@code afterRestore} is always invoked, regardless of {@code beforeCheckpoint} have thrown an exception or not.
- * </li>
- * <li>All {@code Resource}s are notified about checkpoint or restore.
- * </li>
- * <li>If a {@code Resrouce} registered in this {@code Context} throws exception during checkpoint or restore notification, the {@code Context} throws {@code CheckpointException} or {@code RestoreException}, which suppresses exceptions thrown by all {@code Resource}s for corresponding notification.
- * </li>
- * <li>If a {@code Context} registered in the global {@code Context} throws {@code CheckpointException} or {@code RestoreException}, exceptions suppressed by the original exception and all other possible exceptions from registered {@code Resource}s are suppressed by a single exception from the global {@code Context}.
- * </li>
- * </ul>
- *
- * In addition, the global {@code Context} may have additional {@code Resource}s registered by an implementation.
- *
- * <p>A {@code Context} implementor is encouraged to define {@code Context}es with the properties of the global {@code Context}.
- *
- * <p>Checkpoint/restore sequence is:
+ * <li>For single {@code Resource} registered in this {@code Context}:
  * <ul>
- * <li>The global {@code Context} is notified about checkpoint.
- * If a {@code CheckpointException} is thrown, it is postponed.
- * </li>
- * <li>If the global {@code Context} have thrown {@code CheckpointException}, this step is skipped.
- * Otherwise, the Java instance is terminated.
- * An another instance is started at the point of execution at checkpoint.
- * </li>
- * <li>The global {@code Context} is notified about restore.
- * If the global {@code Context} throws a {@code RestoreException} and a {@code CheckpointException} was thrown during checkpoint notification, exceptions suppressed during restore notification are suppressed by the former {@code CheckpointException} and it is thrown by the sequence.
- * Otherwise, if the global {@code Context} throws a {@code RestoreException}, it is thrown by the sequence.
+ *   <li>{@code Resource} is always notified of checkpoint, regardless of other {@code Resource} notifications have thrown an exception or not,
+ *   </li>
+ *   <li>{@code Resource} is always notified of restore, regardless of its checkpoint or others' restore notification have thrown an exception or not.
+ *   </li>
+ *   <li>When an exception is thrown during notificaion, it is caught by the {@code Context} and is suppressed by a {@code CheckpointException} or {@code RestoreException}, depends on the throwing method.
+ *   </li>
+ *   <li>When the {@code Resource} is a {@code Context} and it throws {@code CheckpointException} or {@code RestoreException}, exceptions suppressed by the original exception are suppressed by another {@code CheckpointException} or {@code RestoreException}, depends on the throwing method.
+ *   </li>
+ * </ul>
+ * <li>All exceptions thrown by {@code Resource} are suppressed by {@code CheckpointException} or {@code RestoreException} thrown by the {@code Context}.
  * </li>
  * </ul>
  *
  * @since 15
-*/
+ */
 
 package javax.crac;
 

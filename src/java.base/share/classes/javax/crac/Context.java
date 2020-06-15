@@ -46,8 +46,7 @@ public abstract class Context<R extends Resource> implements Resource {
             throws RestoreException;
 
     /**
-     * Registers a {@code Resource} in this {@code Context}. The {@code Context}
-     * should maintain a weak reference to the {@code Resource}.
+     * Registers a {@code Resource} with this {@code Context}.
      *
      * @param resource {@code Resource} to be registered.
      * @throws NullPointerException if {@code resource} is {@code null}
