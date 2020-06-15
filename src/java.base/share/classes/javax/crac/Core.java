@@ -40,7 +40,7 @@ public class Core {
     }
 
     /**
-     * Gets the global {@code Context}.
+     * Gets the global {@code Context} for checkpoint/restore notifications.
      *
      * @return the global {@code Context}
      */
@@ -49,12 +49,10 @@ public class Core {
     }
 
     /**
-     * Performs checkpoint/restore sequence.
+     * Requests checkpoint. Returns after restore completed.
      *
-     * @throws CheckpointException if some {@code Resource}s threw during
-     * checkpoint notification
-     * @throws RestoreException if some {@code Resource}s threw during restore
-     * notification
+     * @throws CheckpointException if an exception occured during checkpoint notification
+     * @throws RestoreException if an exception occured during restore notification
      */
     public static void tryCheckpointRestore() throws
             CheckpointException,
