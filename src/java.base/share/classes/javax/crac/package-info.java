@@ -24,9 +24,14 @@
 /**
  * Provides checkpoint/restore service.
  * The checkpoint/restore allows to create an image of the current Java Runtime instance and its state.
- * New instances can be created from the image, restoring at the checkpoint.
+ * New instances then can be created from the image, restoring execution at the checkpoint.
  * <p>
- * {@link Resource} is an interface for receiving checkpoint/restore notifications, used for management of resources that cannot be stored in the image.
+ * Resources like opened file desriptors and socket cannot be stored in the image, a use of such resource prevents image creation.
+ * The Java implementation provides best effort to checkpoint for resources which lifecycle is managed by the implementation itself.
+ * For example, resource may be released for checkpoint and acquired after restore.
+ * A notification service is provided for external resources which lifecycle is not directly controlled by the implementation.
+ * <p>
+ * {@link Resource} is an interface for receiving checkpoint/restore notifications.
  * In order to be notified, {@code Resource} needs to be registered in a {@link Context}.
  * {@link Core} is a Java Runtime interface to checkpoint/restore service, it provides the global {@code Context} which can be used as default choice.
  * The global {@code Context} have properties listed below, one can define a custom {@code Context} and register it with the global one.
