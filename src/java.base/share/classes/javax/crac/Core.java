@@ -42,12 +42,18 @@ public class Core {
     }
 
     /**
-     * Requests checkpoint. Returns after restore completed.
+     * Initiates checkpoint/restore. If no exception occurs the method is
+     * invoked in one Java instance and returns in another.
      *
-     * @throws CheckpointException if an exception occured during checkpoint notification
-     * @throws RestoreException if an exception occured during restore notification
+     * @throws CheckpointException if an exception occured during checkpoint
+     * notification and the execution continues in the original Java instance.
+     * @throws RestoreException if an exception occured during restore
+     * notification and execution continues in a new Java instance.
+     * @throws UnsupportedOperationException if checkpoint/restore is not
+     * supported, no notification performed and the execution continues in
+     * the original Java instance.
      */
-    public static void tryCheckpointRestore() throws
+    public static void checkpointRestore() throws
             CheckpointException,
             RestoreException {
         throw new RuntimeException("unimplemented");
@@ -62,7 +68,7 @@ public class Core {
             }
 
             try {
-                tryCheckpointRestore();
+                checkpointRestore();
             } catch (CheckpointException | RestoreException e) {
                 for (Throwable t : e.getSuppressed()) {
                     t.printStackTrace();
