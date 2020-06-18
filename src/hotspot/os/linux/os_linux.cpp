@@ -6590,6 +6590,10 @@ static int checkpoint_restore(FdsInfo* fds) {
   } while (sig == -1 && errno == EINTR);
   assert(sig == RESTORE_SIGNAL, "got what requested");
 
+  if (CRTraceStartupTime) {
+    tty->print_cr("STARTUPTIME " JLONG_FORMAT " restore-native", os::javaTimeNanos());
+  }
+
   if (info.si_code != SI_QUEUE || info.si_int < 0) {
     tty->print_cr("JVM: invalid info for restore provided (may be failed checkpoint)");
     return JVM_CHECKPOINT_ERROR;
@@ -6943,7 +6947,9 @@ int os::Linux::restore() {
   const char* crdir = Arguments::crdir();
   const char* criu = Arguments::criu();
 
-  tty->print_cr("STARTUPTIME " JLONG_FORMAT " criu-call", os::javaTimeNanos());
+  if (CRTraceStartupTime) {
+    tty->print_cr("STARTUPTIME " JLONG_FORMAT " criu-call", os::javaTimeNanos());
+  }
 
   int ret = execlp(/*file*/criu, /*args follow*/
       criu, "restore",

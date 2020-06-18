@@ -25,6 +25,8 @@
 package jdk.crac;
 
 import jdk.crac.impl.OrderedContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 public class Core {
     private static final int JVM_CHECKPOINT_OK    = 0;
@@ -38,10 +40,19 @@ public class Core {
 
     private static native Object[] tryCheckpointRestore0();
 
+    private static boolean traceStartupTime;
+
     private static final Context<Resource> globalContext = new OrderedContext();
     static {
         // force JDK context initialization
         jdk.internal.crac.Core.getJDKContext();
+
+        traceStartupTime = AccessController.doPrivileged(
+                new PrivilegedAction<Boolean>() {
+                    public Boolean run() {
+                        return Boolean.parseBoolean(
+                                System.getProperty("jdk.crac.trace-startup-time"));
+                    }});
     }
 
     private static void translateJVMExceptions(int[] codes, String[] messages,
@@ -73,10 +84,9 @@ public class Core {
         return globalContext;
     }
 
-    public static void tryCheckpointRestore() throws
+    private static void tryCheckpointRestore1() throws
             CheckpointException,
             RestoreException {
-
         try {
             globalContext.beforeCheckpoint(null);
         } catch (CheckpointException ce) {
@@ -100,6 +110,10 @@ public class Core {
         final int retCode = (Integer)bundle[0];
         final int[] codes = (int[])bundle[1];
         final String[] messages = (String[])bundle[2];
+
+        if (traceStartupTime) {
+            System.out.println("STARTUPTIME " + System.nanoTime() + " restore");
+        }
 
         if (retCode != JVM_CHECKPOINT_OK) {
             CheckpointException newException = new CheckpointException();
@@ -128,4 +142,17 @@ public class Core {
 
         globalContext.afterRestore(null);
     }
+
+    public static void tryCheckpointRestore() throws
+            CheckpointException,
+            RestoreException {
+        try {
+            tryCheckpointRestore1();
+        } finally {
+            if (traceStartupTime) {
+                System.out.println("STARTUPTIME " + System.nanoTime() + " restore-finish");
+            }
+        }
+    }
+
 }

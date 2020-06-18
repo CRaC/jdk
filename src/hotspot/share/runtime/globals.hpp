@@ -2521,6 +2521,8 @@ const size_t minimumSymbolTableSize = 1024;
   diagnostic(bool, CRPrintResourcesOnCheckpoint, false, "Print resources "  \
       "to decide CheckpointException")                                      \
                                                                             \
+  diagnostic(bool, CRTraceStartupTime, false, "Trace startup time")         \
+                                                                            \
   experimental(bool, CRDoThrowCheckpointException, true, "Throw "           \
       "CheckpointException if uncheckpointable resource handle found")      \
                                                                             \
