@@ -917,7 +917,7 @@ public:
   CheckpointDCmd(outputStream* output, bool heap) : DCmd(output, heap) { }
     static const char* name() { return "JDK.checkpoint"; }
     static const char* description() {
-      return "Checkpoint via javax.crac.tryCheckpointRestore().";
+      return "Checkpoint via javax.crac.checkpointRestore().";
     }
     static const char* impact() {
       return "High: JVM terminates";

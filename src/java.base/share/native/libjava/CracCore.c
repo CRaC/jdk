@@ -33,7 +33,7 @@
 #include "jdk_internal_crac_Core.h"
 
 JNIEXPORT jobjectArray JNICALL
-Java_jdk_crac_Core_tryCheckpointRestore0(JNIEnv *env, jclass ignore)
+Java_jdk_crac_Core_checkpointRestore0(JNIEnv *env, jclass ignore)
 {
     return JVM_Checkpoint(env);
 }

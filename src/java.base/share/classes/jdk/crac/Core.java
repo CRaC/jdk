@@ -38,7 +38,7 @@ public class Core {
     private static final int JVM_CR_FAIL_SOCK = 2;
     private static final int JVM_CR_FAIL_PIPE = 3;
 
-    private static native Object[] tryCheckpointRestore0();
+    private static native Object[] checkpointRestore0();
 
     private static boolean traceStartupTime;
 
@@ -84,7 +84,7 @@ public class Core {
         return globalContext;
     }
 
-    private static void tryCheckpointRestore1() throws
+    private static void checkpointRestore1() throws
             CheckpointException,
             RestoreException {
         try {
@@ -106,7 +106,7 @@ public class Core {
             throw ce;
         }
 
-        final Object[] bundle = tryCheckpointRestore0();
+        final Object[] bundle = checkpointRestore0();
         final int retCode = (Integer)bundle[0];
         final int[] codes = (int[])bundle[1];
         final String[] messages = (String[])bundle[2];
@@ -143,11 +143,11 @@ public class Core {
         globalContext.afterRestore(null);
     }
 
-    public static void tryCheckpointRestore() throws
+    public static void checkpointRestore() throws
             CheckpointException,
             RestoreException {
         try {
-            tryCheckpointRestore1();
+            checkpointRestore1();
         } finally {
             if (traceStartupTime) {
                 System.out.println("STARTUPTIME " + System.nanoTime() + " restore-finish");

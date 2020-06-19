@@ -44,7 +44,7 @@ public class Test {
         t.start();
         Thread.sleep(1000);
 
-        javax.crac.Core.tryCheckpointRestore();
+        javax.crac.Core.checkpointRestore();
 
         t.join();
         if (!awakened) { throw new RuntimeException("not awakened!"); }

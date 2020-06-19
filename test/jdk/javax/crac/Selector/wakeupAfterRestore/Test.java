@@ -47,7 +47,7 @@ public class Test {
         t.start();
         Thread.sleep(1000);
 
-        javax.crac.Core.tryCheckpointRestore();
+        javax.crac.Core.checkpointRestore();
 
         System.out.print(">> waking up: ");
         selector.wakeup();

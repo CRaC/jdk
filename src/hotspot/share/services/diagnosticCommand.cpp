@@ -1145,7 +1145,7 @@ void CheckpointDCmd::execute(DCmdSource source, TRAPS) {
                                                  true, CHECK);
   JavaValue result(T_VOID);
   JavaCalls::call_static(&result, k,
-                         vmSymbols::tryCheckpointRestoreInternal_name(),
+                         vmSymbols::checkpointRestoreInternal_name(),
                          vmSymbols::void_method_signature(), CHECK);
 }
 

@@ -64,7 +64,7 @@ public class Core {
             CheckpointException,
             RestoreException {
         try {
-            jdk.crac.Core.tryCheckpointRestore();
+            jdk.crac.Core.checkpointRestore();
         } catch (jdk.crac.CheckpointException e) {
             CheckpointException newException = new CheckpointException();
             for (Throwable t : e.getSuppressed()) {
@@ -81,7 +81,7 @@ public class Core {
     }
 
     /* called by VM */
-    private static void tryCheckpointRestoreInternal() {
+    private static void checkpointRestoreInternal() {
         Thread thread = new Thread(() -> {
             try {
                 Thread.sleep(100);

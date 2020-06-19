@@ -91,7 +91,7 @@ public class Test {
         Thread.sleep(500);
 
         if (!skipCR) {
-            javax.crac.Core.tryCheckpointRestore();
+            javax.crac.Core.checkpointRestore();
         }
 
         t.join();

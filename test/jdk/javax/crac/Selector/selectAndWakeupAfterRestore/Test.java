@@ -46,7 +46,7 @@ public class Test {
 
         selectAndWakeup(selector); // just in case
 
-        javax.crac.Core.tryCheckpointRestore();
+        javax.crac.Core.checkpointRestore();
 
         selectAndWakeup(selector);
 

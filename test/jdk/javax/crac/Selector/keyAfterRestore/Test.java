@@ -157,7 +157,7 @@ public class Test {
         ch.register(selector);
 
         try {
-            javax.crac.Core.tryCheckpointRestore();
+            javax.crac.Core.checkpointRestore();
         } catch (javax.crac.CheckpointException e) {
             e.printExceptions(System.out);
             throw e;

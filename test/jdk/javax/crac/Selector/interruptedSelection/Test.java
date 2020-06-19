@@ -47,7 +47,7 @@ public class Test {
         }
 
         if (!skipCR) {
-            javax.crac.Core.tryCheckpointRestore();
+            javax.crac.Core.checkpointRestore();
         }
 
         Thread.sleep(1000);

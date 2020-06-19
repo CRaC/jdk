@@ -88,7 +88,7 @@ public class Test {
             ch.open();
             ch.register(selector);
 
-            javax.crac.Core.tryCheckpointRestore();
+            javax.crac.Core.checkpointRestore();
 
             selector.close();
 
@@ -99,7 +99,7 @@ public class Test {
             Selector selector = Selector.open();
             ch.register(selector);
 
-            javax.crac.Core.tryCheckpointRestore();
+            javax.crac.Core.checkpointRestore();
 
             selector.close();
         }
