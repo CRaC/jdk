@@ -24,6 +24,9 @@
 
 package jdk.crac;
 
+import jdk.crac.impl.CheckpointOpenFileException;
+import jdk.crac.impl.CheckpointOpenResourceException;
+import jdk.crac.impl.CheckpointOpenSocketException;
 import jdk.crac.impl.OrderedContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;

@@ -22,13 +22,13 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package jdk.crac;
+package jdk.crac.impl;
 
 public class CheckpointOpenFileException extends
         CheckpointOpenResourceException {
     private static final long serialVersionUID = 4696394478625532246L;
 
-    CheckpointOpenFileException(String details) {
+    public CheckpointOpenFileException(String details) {
         super(details);
     }
 }
