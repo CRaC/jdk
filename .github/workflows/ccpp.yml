@@ -74,14 +74,18 @@ jobs:
         asset_name: jdk.tar.gz
         asset_content_type: application/gzip
 
-    - run: zip -qr docs.zip docs
-    - name: Upload Docs
-      id: upload-docs
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Compute name
+      id: compute
+      run: |
+        echo "::set-output name=name::${GITHUB_REF##refs/tags/release-}"
+    - uses: actions/checkout@v2
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./docs.zip
-        asset_name: docs.zip
-        asset_content_type: application/zip
+        ref: 'gh-pages'
+        path: 'gh-pages'
+    - run: rsync --delete -r make/ gh-pages/${{ steps.compute.outputs.name }}/
+    - run: |
+        git config --global user.email "bot@org-crac.github.com"
+        git config --global user.name "Github actions"
+    - run: git -C gh-pages add .
+    - run: git -C gh-pages commit -m 'Update ${{ steps.compute.outputs.name }}'
+    - run: git -C gh-pages push origin gh-pages
