@@ -1460,6 +1460,7 @@ bool PerfMemory::restore() {
     return false;
   }
 
+  ::close(fd);
   ::close(checkpoint_fd);
   checkpoint_fd = -1;
   return true;
