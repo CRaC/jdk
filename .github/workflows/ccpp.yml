@@ -2,22 +2,37 @@ name: Build
 
 on:
   push:
-    branches: [ crac ]
+    tags:
+      - 'release-*'
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-    container:
-      image: antonkozlov/docker-build
+    defaults:
+      run:
+        shell: docker exec build bash -e {0}
     steps:
-    - uses: actions/checkout@v2
-    - run: | 
-        id=$(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/criu/releases/tags/HEAD | jq .assets[0].id)
-        curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/criu/releases/assets/$id -LJOH 'Accept: application/octet-stream'
-        tar axf criu-dist.tar.gz
+    - run: echo ${GITHUB_TOKEN} | docker login -u ${GITHUB_ACTOR} --password-stdin docker.pkg.github.com
       env:
-        GITHUB_TOKEN: ${{ secrets.PACKAGES }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
+    - run:  docker pull docker.pkg.github.com/org-crac/docker-build/image:latest
+      shell: bash
+    - name: Start build container
+      run: docker run -d --name build
+        -w $PWD
+        -v /home/runner:/home/runner
+        --entrypoint tail
+        docker.pkg.github.com/org-crac/docker-build/image:latest
+        -f /dev/null
+      shell: bash
+
+    - uses: actions/checkout@v2
+    - run: |
+        id=$(curl https://api.github.com/repos/org-crac/criu/releases/tags/HEAD | jq .assets[0].id)
+        curl https://api.github.com/repos/org-crac/criu/releases/assets/$id -LJOH 'Accept: application/octet-stream'
+        tar axf criu-dist.tar.gz
+      shell: bash
 
     - run: bash ./configure --disable-warnings-as-errors --with-native-debug-symbols=none
     - run: |
@@ -29,13 +44,9 @@ jobs:
         sudo chown root:root jdk/lib/criu
         sudo chmod u+s jdk/lib/criu
 
-    - name: Compute release name
-      id: release
-      run: echo ::set-output name=name::${GITHUB_REF#refs/*/}
-      
     - name: Delete old release
       run: |
-        id=$(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/jdk/releases/tags/release-${{ steps.release.outputs.name }} | jq '.id')
+        id=$(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/jdk/releases/tags/${{ github.ref }} | jq '.id')
         curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/jdk/releases/$id || true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -46,8 +57,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: release-${{ steps.release.outputs.name }}
-        release_name: Release ${{ steps.release.outputs.name }}
+        tag_name: ${{ github.ref }}
+        release_name: ${{ github.ref }}
         draft: false
         prerelease: false
 
