@@ -24,6 +24,16 @@
 
 package jdk.crac;
 
+/**
+ * Suppresses exceptions thrown during restore notification.
+ */
 public class RestoreException extends Exception {
     private static final long serialVersionUID = 5235124335683732665L;
+
+    /**
+     * Creates a {@code RestoreException}.
+     */
+    public RestoreException() {
+        super();
+    }
 }

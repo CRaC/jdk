@@ -31,6 +31,9 @@ import jdk.crac.impl.OrderedContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+/**
+ * Runtime interface to checkpoint/restore service.
+ */
 public class Core {
     private static final int JVM_CHECKPOINT_OK    = 0;
     private static final int JVM_CHECKPOINT_ERROR = 1;
@@ -58,6 +61,10 @@ public class Core {
                     }});
     }
 
+    /** This class is not instantiable. */
+    private Core() {
+    }
+
     private static void translateJVMExceptions(int[] codes, String[] messages,
                                                CheckpointException newException) {
         assert codes.length == messages.length;
@@ -83,6 +90,11 @@ public class Core {
         }
     }
 
+    /**
+     * Gets the global {@code Context} for checkpoint/restore notifications.
+     *
+     * @return the global {@code Context}
+     */
     public static Context<Resource> getGlobalContext() {
         return globalContext;
     }
@@ -146,6 +158,18 @@ public class Core {
         globalContext.afterRestore(null);
     }
 
+    /**
+     * Initiates checkpoint/restore. If no exception occurs the method is
+     * invoked in one Java instance and returns in another.
+     *
+     * @throws CheckpointException if an exception occured during checkpoint
+     * notification and the execution continues in the original Java instance.
+     * @throws RestoreException if an exception occured during restore
+     * notification and execution continues in a new Java instance.
+     * @throws UnsupportedOperationException if checkpoint/restore is not
+     * supported, no notification performed and the execution continues in
+     * the original Java instance.
+     */
     public static void checkpointRestore() throws
             CheckpointException,
             RestoreException {
