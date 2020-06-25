@@ -1141,7 +1141,7 @@ void DebugOnCmdStartDCmd::execute(DCmdSource source, TRAPS) {
 #endif // INCLUDE_JVMTI
 
 void CheckpointDCmd::execute(DCmdSource source, TRAPS) {
-  Klass* k = SystemDictionary::resolve_or_fail(vmSymbols::javax_crac_Core(),
+  Klass* k = SystemDictionary::resolve_or_fail(vmSymbols::jdk_crac_Core(),
                                                  true, CHECK);
   JavaValue result(T_VOID);
   JavaCalls::call_static(&result, k,
