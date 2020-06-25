@@ -29,7 +29,7 @@ jobs:
 
     - uses: actions/checkout@v2
     - run: |
-        id=$(curl https://api.github.com/repos/org-crac/criu/releases/tags/HEAD | jq .assets[0].id)
+        id=$(curl https://api.github.com/repos/org-crac/criu/releases/tags/release-crac | jq .assets[0].id)
         curl https://api.github.com/repos/org-crac/criu/releases/assets/$id -LJOH 'Accept: application/octet-stream'
         tar axf criu-dist.tar.gz
       shell: bash
