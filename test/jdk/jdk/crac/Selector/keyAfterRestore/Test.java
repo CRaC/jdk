@@ -22,7 +22,7 @@
 import java.nio.channels.*;
 import java.io.IOException;
 
-class ChannelResource implements javax.crac.Resource {
+class ChannelResource implements jdk.crac.Resource {
 
     private SocketChannel channel;
     private SelectionKey  key;
@@ -30,7 +30,7 @@ class ChannelResource implements javax.crac.Resource {
 
     private Object        att = new Integer(123);
 
-    public ChannelResource() { javax.crac.Core.getGlobalContext().register(this); }
+    public ChannelResource() { jdk.crac.Core.getGlobalContext().register(this); }
 
     public void open() throws IOException {
         channel = SocketChannel.open();
@@ -157,11 +157,11 @@ public class Test {
         ch.register(selector);
 
         try {
-            javax.crac.Core.checkpointRestore();
-        } catch (javax.crac.CheckpointException e) {
+            jdk.crac.Core.checkpointRestore();
+        } catch (jdk.crac.CheckpointException e) {
             e.printExceptions(System.out);
             throw e;
-        } catch (javax.crac.RestoreException e) {
+        } catch (jdk.crac.RestoreException e) {
             e.printExceptions(System.out);
             throw e;
         }

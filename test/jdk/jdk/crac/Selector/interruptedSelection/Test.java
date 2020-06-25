@@ -20,34 +20,56 @@
 
 
 import java.nio.channels.Selector;
-
+import java.io.IOException;
 
 public class Test {
 
-    private static void test(boolean wakeupBeforeCheckpoint,
-                             boolean wakeupAfterRestore,
-                             boolean setSelectTimeout) throws Exception {
+    // select(): interrupt before the checkpoint
+    private static void test(boolean setTimeout, boolean interruptBeforeCheckpoint, boolean skipCR) throws Exception {
 
         Selector selector = Selector.open();
+        Runnable r = new Runnable() {
+            @Override
+            public void run() {  try {
+                if (setTimeout) { selector.select(3600_000); }
+                else { selector.select(); }
+            } catch (IOException e) { throw new RuntimeException(e); }   }
+        };
+        Thread t = new Thread(r);
+        t.start();
 
-        // do this just in case
+        Thread.sleep(1000);
+
+        if (interruptBeforeCheckpoint) {
+            t.interrupt();
+            t.join();
+            System.out.println(">> interrupt before checkpoint");
+        }
+
+        if (!skipCR) {
+            jdk.crac.Core.checkpointRestore();
+        }
+
+        Thread.sleep(1000);
+
+        if (!interruptBeforeCheckpoint) {
+            t.interrupt();
+            t.join();
+            System.out.println(">>> interrupt after restore");
+        }
+
+        // just in case, check that the selector works as expected
+
+        if (!selector.isOpen()) { throw new RuntimeException("the selector must be open"); }
+
         selector.wakeup();
         selector.select();
 
-        if (wakeupBeforeCheckpoint) {
-            selector.wakeup();
-        }
-
-        javax.crac.Core.checkpointRestore();
-
-        if (wakeupAfterRestore) {
-            selector.wakeup();
-        }
-        if (setSelectTimeout) { selector.select(3600_000); }
-        else { selector.select(); }
-
+        selector.selectNow();
+        selector.select(200);
         selector.close();
     }
+
 
     public static void main(String args[]) throws Exception {
 
@@ -55,24 +77,24 @@ public class Test {
 
         switch (args[0]) {
             case "1":
-                test(true, false, false); // ZE-983
+                test(true, true, false);
                 break;
             case "2":
-                test(true, false, true);
+                test(true, false, false);
                 break;
             case "3":
-                test(true, true, false); // ZE-983
+                test(false, true, false);
                 break;
             case "4":
-                test(true, true, true);
+                test(false, false, false);
                 break;
+            // 5, 6: skip C/R
             case "5":
-                test(false, true, false);
+                test(true, true, true);
                 break;
             case "6":
                 test(false, true, true);
                 break;
-
             default:
                 throw new RuntimeException("invalid test number");
         }

@@ -22,44 +22,59 @@
 import java.nio.channels.Selector;
 import java.io.IOException;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
+
 public class Test {
 
-    // select(): interrupt before the checkpoint
-    private static void test(boolean setTimeout, boolean interruptBeforeCheckpoint, boolean skipCR) throws Exception {
+    private static void test(boolean skipCR) throws Exception {
+
+        AtomicInteger nSelected = new AtomicInteger(0);
 
         Selector selector = Selector.open();
-        Runnable r = new Runnable() {
+
+        int nThreads = skipCR ? 30 : 150; // some selectNow() calls should occur at the same time with C/R
+        Thread threads[] = new Thread[nThreads];
+
+        Runnable rStart = new Runnable() {
             @Override
-            public void run() {  try {
-                if (setTimeout) { selector.select(3600_000); }
-                else { selector.select(); }
-            } catch (IOException e) { throw new RuntimeException(e); }   }
+            public void run() {
+
+                for (int i = 0; i < threads.length; ++i) {
+
+                    threads[i] = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                System.out.println("selectNow");
+                                nSelected.incrementAndGet();
+                                selector.selectNow();
+                                System.out.println("done");
+                                nSelected.decrementAndGet();
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    });
+                    threads[i].start();
+                    try { Thread.sleep(5); } catch (InterruptedException ie) {}
+                }
+            }
         };
-        Thread t = new Thread(r);
-        t.start();
-
-        Thread.sleep(1000);
-
-        if (interruptBeforeCheckpoint) {
-            t.interrupt();
-            t.join();
-            System.out.println(">> interrupt before checkpoint");
-        }
+        Thread tStart = new Thread(rStart);
+        tStart.start();
+        Thread.sleep(500);
 
         if (!skipCR) {
-            javax.crac.Core.checkpointRestore();
+            jdk.crac.Core.checkpointRestore();
         }
 
-        Thread.sleep(1000);
+        tStart.join();
 
-        if (!interruptBeforeCheckpoint) {
-            t.interrupt();
-            t.join();
-            System.out.println(">>> interrupt after restore");
-        }
+        do { Thread.sleep(2000); } while (nSelected.get() > 0);
+        for (Thread t: threads) { t.join(); } // just in case...
 
-        // just in case, check that the selector works as expected
-
+        // === check that the selector works as expected ===
         if (!selector.isOpen()) { throw new RuntimeException("the selector must be open"); }
 
         selector.wakeup();
@@ -67,8 +82,10 @@ public class Test {
 
         selector.selectNow();
         selector.select(200);
+
         selector.close();
     }
+
 
 
     public static void main(String args[]) throws Exception {
@@ -77,23 +94,10 @@ public class Test {
 
         switch (args[0]) {
             case "1":
-                test(true, true, false);
+                test(false);
                 break;
             case "2":
-                test(true, false, false);
-                break;
-            case "3":
-                test(false, true, false);
-                break;
-            case "4":
-                test(false, false, false);
-                break;
-            // 5, 6: skip C/R
-            case "5":
-                test(true, true, true);
-                break;
-            case "6":
-                test(false, true, true);
+                test(true);
                 break;
             default:
                 throw new RuntimeException("invalid test number");

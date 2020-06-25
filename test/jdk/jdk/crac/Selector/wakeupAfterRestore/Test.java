@@ -24,18 +24,21 @@ import java.io.IOException;
 
 public class Test {
 
-    private final static long TIMEOUT = 40_000; // 40 seconds
+    private final static long TIMEOUT = 3600_000; // looong timeout
 
-    static boolean awakened = false;
+    static boolean awakened;
 
-    public static void main(String args[]) throws Exception {
+    private static void test(boolean setTimeout) throws Exception {
 
         Selector selector = Selector.open();
         Runnable r = new Runnable() {
             @Override
             public void run() {
+                System.out.println(">> select, setTimeout = " + setTimeout);
                 try {
-                    selector.select(TIMEOUT);
+                    awakened = false;
+                    if (setTimeout) { selector.select(TIMEOUT); }
+                    else { selector.select(); }
                     awakened = true;
                 } catch (IOException e) { throw new RuntimeException(e); }
             }
@@ -44,9 +47,13 @@ public class Test {
         t.start();
         Thread.sleep(1000);
 
-        javax.crac.Core.checkpointRestore();
+        jdk.crac.Core.checkpointRestore();
 
+        System.out.print(">> waking up: ");
+        selector.wakeup();
         t.join();
+        System.out.println("done");
+
         if (!awakened) { throw new RuntimeException("not awakened!"); }
 
         // check that the selector works as expected
@@ -59,5 +66,24 @@ public class Test {
         selector.selectNow();
         selector.select(200);
         selector.close();
+    }
+
+
+
+
+    public static void main(String args[]) throws Exception {
+
+        if (args.length < 1) { throw new RuntimeException("test number is missing"); }
+
+        switch (args[0]) {
+            case "1":
+                test(true);
+                break;
+            case "2":
+                test(false);
+                break;
+            default:
+                throw new RuntimeException("invalid test number");
+        }
     }
 }

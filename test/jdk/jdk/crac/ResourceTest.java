@@ -1,6 +1,6 @@
-package jdk.test.javax.crac;
+package jdk.test.jdk.crac;
 
-import javax.crac.*;
+import jdk.crac.*;
 
 /**
  * @test
@@ -82,7 +82,7 @@ public class ResourceTest {
         int tries = 2;
         for (int i = 0; i < 2; ++i) {
             try {
-                javax.crac.Core.checkpointRestore();
+                jdk.crac.Core.checkpointRestore();
             } catch (CheckpointException e) {
                 e.printStackTrace();
             } catch (RestoreException e) {

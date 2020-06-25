@@ -45,7 +45,7 @@ public class Test {
 
         Thread.sleep(3000);
 
-        if (!skipCR) { javax.crac.Core.checkpointRestore(); }
+        if (!skipCR) { jdk.crac.Core.checkpointRestore(); }
 
         // close() must wakeup the selector
         Thread tClose = new Thread(new Runnable() {
