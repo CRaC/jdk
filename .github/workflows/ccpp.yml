@@ -17,6 +17,7 @@ jobs:
       run: docker run -d --name build
         -w $PWD
         -v /home/runner:/home/runner
+        -u $(id -u):$(id -g)
         --entrypoint tail
         docker.pkg.github.com/org-crac/docker-build/image:latest
         -f /dev/null
