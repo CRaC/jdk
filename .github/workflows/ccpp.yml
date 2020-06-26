@@ -82,7 +82,7 @@ jobs:
       with:
         ref: 'gh-pages'
         path: 'gh-pages'
-    - run: rsync --delete -r make/ gh-pages/${{ steps.compute.outputs.name }}/
+    - run: rsync --delete -r docs/ gh-pages/${{ steps.compute.outputs.name }}/
     - run: |
         git config --global user.email "bot@org-crac.github.com"
         git config --global user.name "Github actions"
