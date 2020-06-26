@@ -22,6 +22,29 @@ jobs:
         docker.pkg.github.com/org-crac/docker-build/image:latest
         -f /dev/null
 
+    - name: Compute name
+      id: compute
+      run: |
+        echo "::set-output name=name::${GITHUB_REF##refs/tags/release-}"
+
+    - name: Delete old release
+      run: |
+        id=$(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/jdk/releases/tags/${{ steps.compute.outputs.name }} | jq '.id')
+        curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/jdk/releases/$id || true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: ${{ steps.compute.outputs.name }}
+        draft: false
+        prerelease: false
+
     - uses: actions/checkout@v2
     - run: |
         id=$(curl https://api.github.com/repos/org-crac/criu/releases/tags/release-crac | jq .assets[0].id)
@@ -40,24 +63,6 @@ jobs:
         sudo chown root:root jdk/lib/criu
         sudo chmod u+s jdk/lib/criu
 
-    - name: Delete old release
-      run: |
-        id=$(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/jdk/releases/tags/${{ github.ref }} | jq '.id')
-        curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/jdk/releases/$id || true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: ${{ github.ref }}
-        draft: false
-        prerelease: false
-
     - run: tar -zcf jdk.tar.gz jdk
     - name: Upload JDK
       id: upload-jdk
@@ -70,10 +75,6 @@ jobs:
         asset_name: jdk.tar.gz
         asset_content_type: application/gzip
 
-    - name: Compute name
-      id: compute
-      run: |
-        echo "::set-output name=name::${GITHUB_REF##refs/tags/release-}"
     - uses: actions/checkout@v2
       with:
         ref: 'gh-pages'
