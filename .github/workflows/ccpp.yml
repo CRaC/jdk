@@ -8,45 +8,49 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: docker exec build bash -e {0}
     steps:
-    - run: echo ${GITHUB_TOKEN} | docker login -u ${GITHUB_ACTOR} --password-stdin docker.pkg.github.com
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      shell: bash
-    - run:  docker pull docker.pkg.github.com/org-crac/docker-build/image:latest
-      shell: bash
+
     - name: Start build container
-      run: docker run -d --name build
+      run: echo ${GITHUB_TOKEN} | docker login -u ${GITHUB_ACTOR} --password-stdin docker.pkg.github.com;
+        docker run -d --name build
         -w $PWD
         -v /home/runner:/home/runner
+        -u $(id -u):$(id -g)
         --entrypoint tail
         docker.pkg.github.com/org-crac/docker-build/image:latest
         -f /dev/null
-      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Compute parameters
+      id: compute
+      run: |
+        echo "::set-output name=name::${GITHUB_REF##refs/tags/release-}"
 
     - uses: actions/checkout@v2
-    - run: |
-        id=$(curl https://api.github.com/repos/org-crac/criu/releases/tags/release-crac | jq .assets[0].id)
-        curl https://api.github.com/repos/org-crac/criu/releases/assets/$id -LJOH 'Accept: application/octet-stream'
-        tar axf criu-dist.tar.gz
-      shell: bash
 
     - run: bash ./configure --disable-warnings-as-errors --with-native-debug-symbols=none
+      shell: docker exec build bash -e {0}
+
     - run: |
         make images docs
         mv build/linux-x86_64-server-release/images/jdk .
         mv build/linux-x86_64-server-release/images/docs .
-    - run: |
+      shell: docker exec build bash -e {0}
+
+    - name: Bundle CRIU
+      run: |
+        id=$(curl https://api.github.com/repos/org-crac/criu/releases/tags/release-crac | jq .assets[0].id)
+        curl https://api.github.com/repos/org-crac/criu/releases/assets/$id -LJOH 'Accept: application/octet-stream'
+        tar axf criu-dist.tar.gz
         cp criu-dist/sbin/criu jdk/lib/criu
         sudo chown root:root jdk/lib/criu
         sudo chmod u+s jdk/lib/criu
+        tar -zcf jdk.tar.gz jdk
 
     - name: Delete old release
       run: |
-        id=$(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/jdk/releases/tags/${{ github.ref }} | jq '.id')
+        id=$(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/jdk/releases/tags/release-${{ steps.compute.outputs.name }} | jq '.id')
         curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/jdk/releases/$id || true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -57,12 +61,11 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: ${{ github.ref }}
+        tag_name: release-${{ steps.compute.outputs.name }}
+        release_name: ${{ steps.compute.outputs.name }}
         draft: false
         prerelease: false
 
-    - run: tar -zcf jdk.tar.gz jdk
     - name: Upload JDK
       id: upload-jdk
       uses: actions/upload-release-asset@v1
@@ -74,14 +77,17 @@ jobs:
         asset_name: jdk.tar.gz
         asset_content_type: application/gzip
 
-    - run: zip -qr docs.zip docs
-    - name: Upload Docs
-      id: upload-docs
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Checkout gh-pages
+      uses: actions/checkout@v2
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./docs.zip
-        asset_name: docs.zip
-        asset_content_type: application/zip
+        ref: 'gh-pages'
+        path: 'gh-pages'
+
+    - name: Upload Javadoc to Github Pages
+      run: |
+        rsync --delete -r docs/ gh-pages/${{ steps.compute.outputs.name }}/
+        git config --global user.email "bot@org-crac.github.com"
+        git config --global user.name "Github actions"
+        git -C gh-pages add .
+        git -C gh-pages commit -m 'Update ${{ steps.compute.outputs.name }}'
+        git -C gh-pages push origin gh-pages
