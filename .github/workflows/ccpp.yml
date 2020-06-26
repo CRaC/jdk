@@ -9,23 +9,44 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - run: echo ${GITHUB_TOKEN} | docker login -u ${GITHUB_ACTOR} --password-stdin docker.pkg.github.com
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - run:  docker pull docker.pkg.github.com/org-crac/docker-build/image:latest
+
     - name: Start build container
-      run: docker run -d --name build
+      run: echo ${GITHUB_TOKEN} | docker login -u ${GITHUB_ACTOR} --password-stdin docker.pkg.github.com;
+        docker run -d --name build
         -w $PWD
         -v /home/runner:/home/runner
         -u $(id -u):$(id -g)
         --entrypoint tail
         docker.pkg.github.com/org-crac/docker-build/image:latest
         -f /dev/null
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Compute name
+    - name: Compute parameters
       id: compute
       run: |
         echo "::set-output name=name::${GITHUB_REF##refs/tags/release-}"
+
+    - uses: actions/checkout@v2
+
+    - run: bash ./configure --disable-warnings-as-errors --with-native-debug-symbols=none
+      shell: docker exec build bash -e {0}
+
+    - run: |
+        make images docs
+        mv build/linux-x86_64-server-release/images/jdk .
+        mv build/linux-x86_64-server-release/images/docs .
+      shell: docker exec build bash -e {0}
+
+    - name: Bundle CRIU
+      run: |
+        id=$(curl https://api.github.com/repos/org-crac/criu/releases/tags/release-crac | jq .assets[0].id)
+        curl https://api.github.com/repos/org-crac/criu/releases/assets/$id -LJOH 'Accept: application/octet-stream'
+        tar axf criu-dist.tar.gz
+        cp criu-dist/sbin/criu jdk/lib/criu
+        sudo chown root:root jdk/lib/criu
+        sudo chmod u+s jdk/lib/criu
+        tar -zcf jdk.tar.gz jdk
 
     - name: Delete old release
       run: |
@@ -45,25 +66,6 @@ jobs:
         draft: false
         prerelease: false
 
-    - uses: actions/checkout@v2
-    - run: |
-        id=$(curl https://api.github.com/repos/org-crac/criu/releases/tags/release-crac | jq .assets[0].id)
-        curl https://api.github.com/repos/org-crac/criu/releases/assets/$id -LJOH 'Accept: application/octet-stream'
-        tar axf criu-dist.tar.gz
-
-    - run: bash ./configure --disable-warnings-as-errors --with-native-debug-symbols=none
-      shell: docker exec build bash -e {0}
-    - run: |
-        make images docs
-        mv build/linux-x86_64-server-release/images/jdk .
-        mv build/linux-x86_64-server-release/images/docs .
-      shell: docker exec build bash -e {0}
-    - run: |
-        cp criu-dist/sbin/criu jdk/lib/criu
-        sudo chown root:root jdk/lib/criu
-        sudo chmod u+s jdk/lib/criu
-
-    - run: tar -zcf jdk.tar.gz jdk
     - name: Upload JDK
       id: upload-jdk
       uses: actions/upload-release-asset@v1
@@ -75,14 +77,17 @@ jobs:
         asset_name: jdk.tar.gz
         asset_content_type: application/gzip
 
-    - uses: actions/checkout@v2
+    - name: Checkout gh-pages
+      uses: actions/checkout@v2
       with:
         ref: 'gh-pages'
         path: 'gh-pages'
-    - run: rsync --delete -r docs/ gh-pages/${{ steps.compute.outputs.name }}/
-    - run: |
+
+    - name: Upload Javadoc to Github Pages
+      run: |
+        rsync --delete -r docs/ gh-pages/${{ steps.compute.outputs.name }}/
         git config --global user.email "bot@org-crac.github.com"
         git config --global user.name "Github actions"
-    - run: git -C gh-pages add .
-    - run: git -C gh-pages commit -m 'Update ${{ steps.compute.outputs.name }}'
-    - run: git -C gh-pages push origin gh-pages
+        git -C gh-pages add .
+        git -C gh-pages commit -m 'Update ${{ steps.compute.outputs.name }}'
+        git -C gh-pages push origin gh-pages
