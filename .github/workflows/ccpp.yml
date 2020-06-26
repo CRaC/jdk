@@ -8,16 +8,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: docker exec build bash -e {0}
     steps:
     - run: echo ${GITHUB_TOKEN} | docker login -u ${GITHUB_ACTOR} --password-stdin docker.pkg.github.com
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      shell: bash
     - run:  docker pull docker.pkg.github.com/org-crac/docker-build/image:latest
-      shell: bash
     - name: Start build container
       run: docker run -d --name build
         -w $PWD
@@ -25,20 +20,20 @@ jobs:
         --entrypoint tail
         docker.pkg.github.com/org-crac/docker-build/image:latest
         -f /dev/null
-      shell: bash
 
     - uses: actions/checkout@v2
     - run: |
         id=$(curl https://api.github.com/repos/org-crac/criu/releases/tags/release-crac | jq .assets[0].id)
         curl https://api.github.com/repos/org-crac/criu/releases/assets/$id -LJOH 'Accept: application/octet-stream'
         tar axf criu-dist.tar.gz
-      shell: bash
 
     - run: bash ./configure --disable-warnings-as-errors --with-native-debug-symbols=none
+      shell: docker exec build bash -e {0}
     - run: |
         make images docs
         mv build/linux-x86_64-server-release/images/jdk .
         mv build/linux-x86_64-server-release/images/docs .
+      shell: docker exec build bash -e {0}
     - run: |
         cp criu-dist/sbin/criu jdk/lib/criu
         sudo chown root:root jdk/lib/criu
