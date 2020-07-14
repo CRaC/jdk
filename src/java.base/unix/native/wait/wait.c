@@ -1,4 +1,5 @@
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -43,7 +44,16 @@ int main(int argc, char *argv[]) {
     }
 
     int status;
-    waitpid(g_pid, &status, 0);
+    int ret;
+    do {
+        ret = waitpid(g_pid, &status, 0);
+    } while (ret == -1 && errno == EINTR);
+
+    if (ret == -1) {
+        perror(MSGPREFIX "waitpid");
+        return 1;
+    }
+
     if (WIFEXITED(status)) {
         return WEXITSTATUS(status);
     }
