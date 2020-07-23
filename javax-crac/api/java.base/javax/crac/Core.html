@@ -100,7 +100,7 @@ loadScripts(document, 'script');</script>
 <hr>
 <pre>public class <span class="typeNameLabel">Core</span>
 extends <a href="../../java/lang/Object.html" title="class in java.lang">Object</a></pre>
-<div class="block">Runtime interface to checkpoint/restore service.</div>
+<div class="block">The coordination service.</div>
 </section>
 <section class="summary">
 <ul class="blockList">
@@ -126,7 +126,7 @@ extends <a href="../../java/lang/Object.html" title="class in java.lang">Object<
 <td class="colFirst"><code>static void</code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#checkpointRestore()">checkpointRestore</a></span>()</code></th>
 <td class="colLast">
-<div class="block">Initiates checkpoint/restore.</div>
+<div class="block">Requests checkpoint.</div>
 </td>
 </tr>
 <tr class="rowColor" id="i1">
@@ -175,7 +175,7 @@ extends <a href="../../java/lang/Object.html" title="class in java.lang">Object<
 <div class="memberSignature"><span class="modifiers">public static</span>&nbsp;<span class="returnType">void</span>&nbsp;<span class="memberName">checkpointRestore</span>()
                               throws <span class="exceptions"><a href="CheckpointException.html" title="class in javax.crac">CheckpointException</a>,
 <a href="RestoreException.html" title="class in javax.crac">RestoreException</a></span></div>
-<div class="block">Initiates checkpoint/restore. If no exception occurs the method is
+<div class="block">Requests checkpoint. If no exception occurs the method is
  invoked in one Java instance and returns in another.</div>
 <dl>
 <dt><span class="throwsLabel">Throws:</span></dt>
