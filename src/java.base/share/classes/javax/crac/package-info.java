@@ -22,9 +22,10 @@
  */
 
 /**
- * Provides checkpoint/restore service.
+ * Provides coordination with checkpoint/restore.
  * The checkpoint/restore allows to create an image of the current Java Runtime instance and its state.
  * New instances then can be created from the image, restoring execution at the checkpoint.
+ * The package provides coordination with checkpoint and restore, as well as related services.
  * <p>
  * Resources like opened file desriptors and socket cannot be stored in the image, a use of such resource prevents image creation.
  * The Java implementation provides best effort to checkpoint for resources which lifecycle is managed by the implementation itself.
@@ -33,9 +34,9 @@
  * <p>
  * {@link Resource} is an interface for receiving checkpoint/restore notifications.
  * In order to be notified, {@code Resource} needs to be registered in a {@link Context}.
- * {@link Core} is a Java Runtime interface to checkpoint/restore service, it provides the global {@code Context} which can be used as default choice.
+ * {@link Core} is a core interface for coordination. It provides the global {@code Context} which can be used as default choice.
  * The global {@code Context} have properties listed below, one can define a custom {@code Context} and register it with the global one.
- * {@code Core} has also a method to initiate checkpoint/restore.
+ * {@code Core} has also a method to request checkpoint.
  * <p>
  * Methods of {@code Resource} are invoked as a notification of checkpoint and restore.
  * If a {@code Resource} is incapable to process notification, corresponding method throws an exception.
@@ -46,8 +47,8 @@
  * A class may extend {@code Context} and define custom rules of notification processing by overriding {@code Resource} method.
  * Since a {@code Context} may be registered with other {@code Context}, they form a {@code Context} hierarchy.
  * <p>
- * Checkpoint/restore is initiated by {@code Core.checkpointRestore}.
- * Checkpoint notification of the global {@code Context} is performed.
+ * Checkpoint can requested by {@code Core.checkpointRestore} or by some other way.
+ * Then checkpoint notification of the global {@code Context} is performed.
  * If the global {@code Context} have not thrown {@code CheckpointException}, the current Java instance is used to create the image in a platform dependent way.
  * The current instance is terminated.
  * Later, a new instance is created by some means, for example via Java launcher in a special mode.

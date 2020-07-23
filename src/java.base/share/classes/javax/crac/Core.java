@@ -24,7 +24,7 @@
 package javax.crac;
 
 /**
- * Runtime interface to checkpoint/restore service.
+ * The coordination service.
  */
 public class Core {
 
@@ -42,7 +42,7 @@ public class Core {
     }
 
     /**
-     * Initiates checkpoint/restore. If no exception occurs the method is
+     * Requests checkpoint. If no exception occurs the method is
      * invoked in one Java instance and returns in another.
      *
      * @throws CheckpointException if an exception occured during checkpoint
