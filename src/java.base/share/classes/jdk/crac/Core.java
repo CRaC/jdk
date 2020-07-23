@@ -32,7 +32,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 /**
- * Runtime interface to checkpoint/restore service.
+ * The coordination service.
  */
 public class Core {
     private static final int JVM_CHECKPOINT_OK    = 0;
@@ -159,7 +159,7 @@ public class Core {
     }
 
     /**
-     * Initiates checkpoint/restore. If no exception occurs the method is
+     * Requests checkpoint. If no exception occurs the method is
      * invoked in one Java instance and returns in another.
      *
      * @throws CheckpointException if an exception occured during checkpoint
