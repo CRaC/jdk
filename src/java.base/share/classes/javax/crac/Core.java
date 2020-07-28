@@ -42,8 +42,8 @@ public class Core {
     }
 
     /**
-     * Requests checkpoint. If no exception occurs the method is
-     * invoked in one Java instance and returns in another.
+     * Requests checkpoint and returns upon a successful restore.
+     * May throw an exception if the checkpoint or restore are unsuccessful.
      *
      * @throws CheckpointException if an exception occured during checkpoint
      * notification and the execution continues in the original Java instance.
