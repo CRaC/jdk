@@ -34,7 +34,7 @@ jobs:
 
     - run: |
         make images docs
-        mv build/linux-x86_64-server-release/images/jdk .
+        mv build/linux-x86_64-server-release/images/jdk jdk14-crac
         mv build/linux-x86_64-server-release/images/docs .
       shell: docker exec build bash -e {0}
 
@@ -43,10 +43,10 @@ jobs:
         id=$(curl https://api.github.com/repos/org-crac/criu/releases/tags/release-crac | jq .assets[0].id)
         curl https://api.github.com/repos/org-crac/criu/releases/assets/$id -LJOH 'Accept: application/octet-stream'
         tar axf criu-dist.tar.gz
-        cp criu-dist/sbin/criu jdk/lib/criu
-        sudo chown root:root jdk/lib/criu
-        sudo chmod u+s jdk/lib/criu
-        tar -zcf jdk.tar.gz jdk
+        cp criu-dist/sbin/criu jdk14-crac/lib/criu
+        sudo chown root:root jdk14-crac/lib/criu
+        sudo chmod u+s jdk14-crac/lib/criu
+        tar -zcf jdk14-crac.tar.gz jdk14-crac
 
     - name: Delete old release
       run: |
@@ -73,8 +73,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./jdk.tar.gz
-        asset_name: jdk.tar.gz
+        asset_path: ./jdk14-crac.tar.gz
+        asset_name: jdk14-crac.tar.gz
         asset_content_type: application/gzip
 
     - name: Checkout gh-pages
