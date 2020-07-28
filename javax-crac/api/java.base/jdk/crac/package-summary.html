@@ -71,15 +71,14 @@ loadScripts(document, 'script');</script>
 <section class="packageDescription"><a id="package.description">
 <!--   -->
 </a>
-<div class="block">Provides coordination with checkpoint/restore.
- The checkpoint/restore allows to create an image of the current Java Runtime instance and its state.
- New instances then can be created from the image, restoring execution at the checkpoint.
- Coordination allows restored instances to behave differently according to a dynamic execution environment.
+<div class="block">Provides explicit coordination with a checkpoint/restore mechanism.
+ A checkpoint/restore implementation may capture process or application state images for later continuation.
+ Coordination allows application code to prepare for a checkpoint and to adapt to changes in the execution environment after a restore.
  <p>
- Coordination requires Java application not to capture parts of execution environment which may change after restore.
- The Java implementation provides best-effort checks that no such parts are captured by the application.
- Checkpoint notification allows the application to prepare for checkpoint and satisfy checks.
- After the restore, corresponding notification allows the application to re-initialize in the new environment.
+ Successful checkpointing and restoration may require that no checkpointed state exist that might not be validly reproducible when
+restoring instances from the image.
+ Coordination enables application to proactively discard problematic state ahead of checkpointing, and to reestablish needed state upon restoration.
+ A Java implementation may provide detection of some subsets of state that are known to prevent successful checkpoints.
  <p>
  For example, a state of opened file descriptors or socket may be impossible to store in the image.
  The implementation may detect such resources and then prevent checkpoint.
