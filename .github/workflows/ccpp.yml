@@ -31,7 +31,10 @@ jobs:
 
     - uses: actions/checkout@v2
 
-    - run: bash ./configure --disable-warnings-as-errors --with-native-debug-symbols=none
+    - run: bash ./configure
+        --disable-warnings-as-errors
+        --with-version-pre=crac
+        --with-native-debug-symbols=none
       shell: docker exec build bash -e {0}
 
     - run: |
