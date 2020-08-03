@@ -6958,7 +6958,7 @@ int os::Linux::restore() {
       "--shell-job",
       "--action-script", restore_script,
       "-D", crdir,
-      "-v4", "-o", "/tmp/restore4.log",
+      "-v1",
       "--exec-cmd", "--", wait,
       (char*)NULL);
 
