@@ -164,7 +164,7 @@ class PerfMemory : AllStatic {
     // the caller is expected to free the allocated memory.
     static char* get_perfdata_file_path();
 
-    static bool checkpoint();
+    static bool checkpoint(const char* checkpoint_path);
     static bool checkpoint_fail();
     static bool restore();
 };

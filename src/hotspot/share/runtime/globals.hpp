@@ -2512,6 +2512,13 @@ const size_t minimumSymbolTableSize = 1024;
   experimental(bool, UseFastUnorderedTimeStamps, false,                     \
           "Use platform unstable time where supported for timestamps only") \
                                                                             \
+  product(ccstr, CRaCCheckpointTo, NULL, "Path to create the image")        \
+                                                                            \
+  product(ccstr, CRaCRestoreFrom, NULL, "Path to image to restore from")    \
+                                                                            \
+  product(bool, CRaCRequireRestore, false, "Unable to restore is a fatal"   \
+          "error")                                                          \
+                                                                            \
   diagnostic(bool, CRAllowToSkipCheckpoint, false,                          \
           "Allow implementation to not call Checkpoint if helper not found")\
                                                                             \

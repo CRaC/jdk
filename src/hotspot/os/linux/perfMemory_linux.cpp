@@ -1349,18 +1349,15 @@ void PerfMemory::detach(char* addr, size_t bytes, TRAPS) {
   unmap_shared(addr, bytes);
 }
 
-bool PerfMemory::checkpoint() {
+bool PerfMemory::checkpoint(const char* checkpoint_path) {
+  assert(checkpoint_path, "should be set");
+
   if (!backing_store_file_name) {
     return true;
   }
 
-  if (!Arguments::crdir()) {
-    tty->print_cr("checkpoint dir is not set");
-    return false;
-  }
-
   char path[JVM_MAXPATHLEN];
-  int pathlen = snprintf(path, sizeof(path),"%s/perfdata", Arguments::crdir());
+  int pathlen = snprintf(path, sizeof(path),"%s/perfdata", checkpoint_path);
 
   RESTARTABLE(::open(path, O_RDWR|O_CREAT|O_NOFOLLOW, S_IRUSR|S_IWUSR), checkpoint_fd);
   if (checkpoint_fd < 0) {
