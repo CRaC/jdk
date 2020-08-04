@@ -30,6 +30,7 @@
 #include "memory/resourceArea.hpp"
 #include "oops/oop.inline.hpp"
 #include "os_linux.inline.hpp"
+#include "perfMemory_linux.hpp"
 #include "runtime/handles.inline.hpp"
 #include "runtime/os.hpp"
 #include "runtime/perfMemory.hpp"
@@ -1349,7 +1350,7 @@ void PerfMemory::detach(char* addr, size_t bytes, TRAPS) {
   unmap_shared(addr, bytes);
 }
 
-bool PerfMemory::checkpoint(const char* checkpoint_path) {
+bool PerfMemoryLinux::checkpoint(const char* checkpoint_path) {
   assert(checkpoint_path, "should be set");
 
   if (!backing_store_file_name) {
@@ -1357,7 +1358,7 @@ bool PerfMemory::checkpoint(const char* checkpoint_path) {
   }
 
   char path[JVM_MAXPATHLEN];
-  int pathlen = snprintf(path, sizeof(path),"%s/perfdata", checkpoint_path);
+  int pathlen = snprintf(path, sizeof(path),"%s/%s", checkpoint_path, perfdata_name());
 
   RESTARTABLE(::open(path, O_RDWR|O_CREAT|O_NOFOLLOW, S_IRUSR|S_IWUSR), checkpoint_fd);
   if (checkpoint_fd < 0) {
@@ -1365,8 +1366,8 @@ bool PerfMemory::checkpoint(const char* checkpoint_path) {
     return false;
   }
 
-  char* p = start();
-  size_t len = capacity();
+  char* p = PerfMemory::start();
+  size_t len = PerfMemory::capacity();
   do {
     int result;
     RESTARTABLE(::write(checkpoint_fd, p, len), result);
@@ -1380,7 +1381,8 @@ bool PerfMemory::checkpoint(const char* checkpoint_path) {
     len -= (size_t)result;
   } while (0 < len);
 
-  void* mmapret = ::mmap(start(), capacity(), PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, checkpoint_fd, 0);
+  void* mmapret = ::mmap(PerfMemory::start(), PerfMemory::capacity(),
+      PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, checkpoint_fd, 0);
   if (MAP_FAILED == mmapret) {
     tty->print_cr("cannot mmap checkpoint perfdata file: %s", os::strerror(errno));
     ::close(checkpoint_fd);
@@ -1391,7 +1393,7 @@ bool PerfMemory::checkpoint(const char* checkpoint_path) {
   return true;
 }
 
-bool PerfMemory::checkpoint_fail() {
+bool PerfMemoryLinux::checkpoint_fail() {
   if (checkpoint_fd < 0) {
     return true;
   }
@@ -1403,7 +1405,8 @@ bool PerfMemory::checkpoint_fail() {
     return false;
   }
 
-  void* mmapret = ::mmap(start(), capacity(), PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, fd, 0);
+  void* mmapret = ::mmap(PerfMemory::start(), PerfMemory::capacity(),
+      PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, fd, 0);
   if (MAP_FAILED == mmapret) {
     tty->print_cr("cannot mmap old perfdata file: %s", os::strerror(errno));
     ::close(fd);
@@ -1413,7 +1416,7 @@ bool PerfMemory::checkpoint_fail() {
   return true;
 }
 
-bool PerfMemory::restore() {
+bool PerfMemoryLinux::restore() {
   if (checkpoint_fd < 0) {
     return true;
   }
@@ -1430,15 +1433,16 @@ bool PerfMemory::restore() {
   if (fd == OS_ERR) {
     tty->print_cr("cannot open restore perfdata file: %s", os::strerror(errno));
 
-    void* mmapret = ::mmap(start(), capacity(), PROT_READ|PROT_WRITE, MAP_FIXED|MAP_PRIVATE, checkpoint_fd, 0);
+    void* mmapret = ::mmap(PerfMemory::start(), PerfMemory::capacity(),
+        PROT_READ|PROT_WRITE, MAP_FIXED|MAP_PRIVATE, checkpoint_fd, 0);
     if (MAP_FAILED == mmapret) {
       tty->print_cr("cannot remap checkpoint perfdata file: %s", os::strerror(errno));
     }
     return false;
   }
 
-  char* p = start();
-  size_t len = capacity();
+  char* p = PerfMemory::start();
+  size_t len = PerfMemory::capacity();
   do {
     int result;
     RESTARTABLE(::write(fd, p, len), result);
@@ -1451,7 +1455,8 @@ bool PerfMemory::restore() {
     len -= (size_t)result;
   } while (0 < len);
 
-  void* mmapret = ::mmap(start(), capacity(), PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, fd, 0);
+  void* mmapret = ::mmap(PerfMemory::start(), PerfMemory::capacity(),
+      PROT_READ|PROT_WRITE, MAP_FIXED|MAP_SHARED, fd, 0);
   if (MAP_FAILED == mmapret) {
     tty->print_cr("cannot mmap restore perfdata file: %s", os::strerror(errno));
     ::close(fd);

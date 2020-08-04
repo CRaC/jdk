@@ -44,6 +44,7 @@
 #include "os_posix.inline.hpp"
 #include "os_share_linux.hpp"
 #include "osContainer_linux.hpp"
+#include "perfMemory_linux.hpp"
 #include "prims/jniFastGetField.hpp"
 #include "prims/jvm_misc.hpp"
 #include "runtime/arguments.hpp"
@@ -6825,17 +6826,17 @@ void VM_Crac::doit() {
     return;
   }
 
-  if (!PerfMemory::checkpoint(CRaCCheckpointTo)) {
+  if (!PerfMemoryLinux::checkpoint(CRaCCheckpointTo)) {
     return;
   }
 
   int ret = checkpoint_restore(&fds);
   if (ret == JVM_CHECKPOINT_ERROR) {
-    PerfMemory::checkpoint_fail();
+    PerfMemoryLinux::checkpoint_fail();
     return;
   }
 
-  PerfMemory::restore();
+  PerfMemoryLinux::restore();
 
   _ok = true;
 }
@@ -7025,12 +7026,14 @@ void os::Linux::restore() {
     return;
   }
 
-  snprintf(bufp, end - bufp, "%s/perfdata", CRaCRestoreFrom);
+  snprintf(bufp, end - bufp, "%s/%s", CRaCRestoreFrom, PerfMemoryLinux::perfdata_name());
   int fd_perfdata = ::open(bufp, O_RDWR);
   char* inherit_perfdata = NULL;
   if (0 < fd_perfdata) {
-    inherit_perfdata = add_arg(&bufp, end, "fd[%d]:%s/perfdata", fd_perfdata,
-        cppath[0] == '/' ? cppath + 1 : cppath);
+    inherit_perfdata = add_arg(&bufp, end, "fd[%d]:%s/%s",
+        fd_perfdata,
+        cppath[0] == '/' ? cppath + 1 : cppath,
+        PerfMemoryLinux::perfdata_name());
   }
 
   if (CRTraceStartupTime) {
