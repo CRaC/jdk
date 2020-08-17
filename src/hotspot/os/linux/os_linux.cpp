@@ -44,6 +44,7 @@
 #include "os_posix.inline.hpp"
 #include "os_share_linux.hpp"
 #include "osContainer_linux.hpp"
+#include "perfMemory_linux.hpp"
 #include "prims/jniFastGetField.hpp"
 #include "prims/jvm_misc.hpp"
 #include "runtime/arguments.hpp"
@@ -302,6 +303,8 @@ int os::Linux::_page_size = -1;
 bool os::Linux::_supports_fast_thread_cpu_time = false;
 const char * os::Linux::_glibc_version = NULL;
 const char * os::Linux::_libpthread_version = NULL;
+
+static const char* _criu = NULL;
 
 static jlong initial_time_count=0;
 
@@ -6328,7 +6331,7 @@ static void trace_cr(const char* msg, ...) {
 }
 
 void os::Linux::vm_create_start() {
-  if (!Arguments::can_checkpoint()) {
+  if (!CRaCCheckpointTo) {
     return;
   }
   _vm_inited_fds.initialize();
@@ -6513,21 +6516,57 @@ static void mark_persistent(FdsInfo *fds) {
   _persistent_resources = NULL;
 }
 
+static void cr_util_path(char* path, int len) {
+  os::jvm_path(path, len);
+  // path is ".../lib/server/libjvm.so"
+  for (int i = 0; i < 2; ++i) {
+    char *after_elem = strrchr(path, '/');
+    *after_elem = '\0';
+  }
+}
+
+static const char* compute_criu(const char *util_path) {
+  if (_criu) {
+    return _criu;
+  }
+
+#define SUF "criu"
+  const size_t criulen = strlen(util_path) + 1 + sizeof(SUF);
+  char *criu = NEW_C_HEAP_ARRAY(char, criulen, mtInternal);
+  assert(criu != NULL, "JVM should fail");
+  int r = jio_snprintf(criu, criulen, "%s/" SUF, util_path);
+#undef SUF
+  assert(r < (int)criulen, "len miscalc");
+
+  struct stat dummy;
+  if (0 == stat(criu, &dummy)) {
+    _criu = criu;
+  } else {
+    FREE_C_HEAP_ARRAY(char, criu);
+    warning("Could not find %s: %s", criu, strerror(errno));
+    // use system one
+    _criu = "criu";
+  }
+  return _criu;
+}
+
 static int call_criu() {
-  char cmd[1024];
+  char util_path[JVM_MAXPATHLEN];
+  cr_util_path(util_path, sizeof(util_path));
+
+  const char* criu = compute_criu(util_path);
 
   pid_t jvm = getpid();
 
-  const char* crdir = Arguments::crdir();
-  const char* criu = Arguments::criu();
-
+  char cmd[3 * JVM_MAXPATHLEN];
   if ((int)sizeof(cmd) <= snprintf(cmd, sizeof(cmd),
         "%s dump"
         " -t %d"
         " -D %s"
+        " --action-script %s/action-script"
         " --shell-job"
         " -v4 -o dump4.log", // -D without -W makes criu cd to image dir for logs
-        criu, jvm, crdir)) {
+        criu, jvm, CRaCCheckpointTo, util_path)) {
     trace_cr("can't fit CRIU cmd");
     return -1;
   }
@@ -6787,23 +6826,23 @@ void VM_Crac::doit() {
     return;
   }
 
-  if (!PerfMemory::checkpoint()) {
+  if (!PerfMemoryLinux::checkpoint(CRaCCheckpointTo)) {
     return;
   }
 
   int ret = checkpoint_restore(&fds);
   if (ret == JVM_CHECKPOINT_ERROR) {
-    PerfMemory::checkpoint_fail();
+    PerfMemoryLinux::checkpoint_fail();
     return;
   }
 
-  PerfMemory::restore();
+  PerfMemoryLinux::restore();
 
   _ok = true;
 }
 
 void os::Linux::register_persistent_fd(int fd, int st_dev, int st_ino) {
-  if (!Arguments::can_checkpoint()) {
+  if (!CRaCCheckpointTo) {
     return;
   }
   if (!_persistent_resources) {
@@ -6831,7 +6870,7 @@ void os::Linux::register_persistent_fd(int fd, int st_dev, int st_ino) {
 }
 
 void os::Linux::deregister_persistent_fd(int fd, int st_dev, int st_ino) {
-  if (!Arguments::can_checkpoint()) {
+  if (!CRaCCheckpointTo) {
     return;
   }
   if (!_persistent_resources) {
@@ -6847,6 +6886,28 @@ void os::Linux::deregister_persistent_fd(int fd, int st_dev, int st_ino) {
   if (i < _persistent_resources->length()) {
     _persistent_resources->remove_at(i);
   }
+}
+
+bool os::Linux::prepare_checkpoint() {
+  struct stat st;
+
+  if (0 == stat(CRaCCheckpointTo, &st)) {
+    if ((st.st_mode & S_IFMT) != S_IFDIR) {
+      warning("%s: not a directory", CRaCCheckpointTo);
+      return false;
+    }
+  } else {
+    if (-1 == mkdir(CRaCCheckpointTo, 0700)) {
+      warning("cannot create %s: %s", CRaCCheckpointTo, strerror(errno));
+      return false;
+    }
+    if (-1 == rmdir(CRaCCheckpointTo)) {
+      warning("cannot cleanup after check: %s", strerror(errno));
+      // not fatal
+    }
+  }
+
+  return true;
 }
 
 static Handle ret_cr(int ret, Handle codes, Handle msgs, TRAPS) {
@@ -6867,7 +6928,12 @@ static Handle ret_cr(int ret, TRAPS) {
 /** Checkpoint main entry.
  */
 Handle os::Linux::checkpoint(TRAPS) {
-  if (!Arguments::can_checkpoint()) {
+  if (!CRaCCheckpointTo) {
+    return ret_cr(JVM_CHECKPOINT_NONE, THREAD);
+  }
+
+  if (-1 == mkdir(CRaCCheckpointTo, 0700) && errno != EEXIST) {
+    warning("cannot create %s: %s", CRaCCheckpointTo, strerror(errno));
     return ret_cr(JVM_CHECKPOINT_NONE, THREAD);
   }
 
@@ -6915,55 +6981,89 @@ static char* add_arg(char** begin_p, char* end, const char *fmt, ...) {
   return begin;
 }
 
-int os::Linux::restore() {
-  char path[JVM_MAXPATHLEN];
-  os::jvm_path(path, sizeof(path));
+void os::Linux::restore() {
+  struct stat st;
 
-  // path is ".../lib/server/libjvm.so"
-  for (int i = 0; i < 2; ++i) {
-    char *after_elem = strrchr(path, '/');
-    if (after_elem == NULL) {
-      trace_cr("can't get base dir (%d)", i);
-      return -1;
-    }
-    *after_elem = '\0';
+  char util_path[JVM_MAXPATHLEN];
+  cr_util_path(util_path, sizeof(util_path));
+
+  const char *criu = compute_criu(util_path);
+
+  char tempbuf[4 * JVM_MAXPATHLEN];
+  char* end = tempbuf + sizeof(tempbuf);
+  char* bufp = tempbuf;
+
+  snprintf(bufp, end - bufp, "%s/cppath", CRaCRestoreFrom);
+  int fd_cppath = ::open(bufp, O_RDONLY);
+  if (fd_cppath < 0) {
+    trace_cr("no valid image to restore: %s", CRaCRestoreFrom);
+    return;
   }
+  int cppathlen = read(fd_cppath, bufp, end - bufp);
+  close(fd_cppath);
 
-  char buf[1024];
-  char* end = buf + sizeof(buf);
-  char* bufp = buf;
+  char *cppath = bufp;
+  if (cppathlen < 0) {
+    warning("cannot read image: %s", strerror(errno));
+    return;
+  }
+  if (cppathlen == end - bufp) {
+    warning("invalid image: content too long");
+    return;
+  }
+  bufp[cppathlen] = '\0';
+  bufp += cppathlen + 1;
 
-  char* restore_script = add_arg(&bufp, end, "%s/restore-script", path);
+  char* restore_script = add_arg(&bufp, end, "%s/action-script", util_path);
   if (!restore_script) {
-    trace_cr("can't format restore-script path");
-    return -1;
+    warning("cannot format restore_script path");
+    return;
   }
 
-  char* wait = add_arg(&bufp, end, "%s/wait", path);
+  char* wait = add_arg(&bufp, end, "%s/wait", util_path);
   if (!wait) {
-    trace_cr("can't format restore-script path");
-    return -1;
+    warning("cannot format action-script path");
+    return;
   }
 
-  const char* crdir = Arguments::crdir();
-  const char* criu = Arguments::criu();
+  snprintf(bufp, end - bufp, "%s/%s", CRaCRestoreFrom, PerfMemoryLinux::perfdata_name());
+  int fd_perfdata = ::open(bufp, O_RDWR);
+  char* inherit_perfdata = NULL;
+  if (0 < fd_perfdata) {
+    inherit_perfdata = add_arg(&bufp, end, "fd[%d]:%s/%s",
+        fd_perfdata,
+        cppath[0] == '/' ? cppath + 1 : cppath,
+        PerfMemoryLinux::perfdata_name());
+  }
 
   if (CRTraceStartupTime) {
     tty->print_cr("STARTUPTIME " JLONG_FORMAT " criu-call", os::javaTimeNanos());
   }
 
-  int ret = execlp(/*file*/criu, /*args follow*/
-      criu, "restore",
-      "-W", ".",
-      "--shell-job",
-      "--action-script", restore_script,
-      "-D", crdir,
-      "-v4", "-o", "/tmp/restore4.log",
-      "--exec-cmd", "--", wait,
-      (char*)NULL);
+  const char* args[32];
+  const char** argp = args;
+  *argp++ = criu;
+  *argp++ = "restore";
+  *argp++ = "-W";
+  *argp++ = ".";
+  if (inherit_perfdata) {
+    *argp++ = "--inherit-fd";
+    *argp++ = inherit_perfdata;
+  }
+  *argp++ = "--shell-job";
+  *argp++ = "--action-script";
+  *argp++ = restore_script;
+  *argp++ = "-D";
+  *argp++ = CRaCRestoreFrom;
+  *argp++ = "-v1";
+  *argp++ = "--exec-cmd";
+  *argp++ = "--";
+  *argp++ = wait;
+  *argp++ = NULL;
+  guarantee(argp - args < (int)ARRAY_SIZE(args), "args overflow");
 
-  trace_cr("can't execute \"%s restore ...\" (%s)", criu, strerror(errno));
-  return -1;
+  execvp(criu, (char**)args);
+  warning("cannot execute \"%s restore ...\" (%s)", criu, strerror(errno));
 }
 
 /////////////// Unit tests ///////////////

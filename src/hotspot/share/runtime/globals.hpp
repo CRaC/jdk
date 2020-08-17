@@ -2512,6 +2512,15 @@ const size_t minimumSymbolTableSize = 1024;
   experimental(bool, UseFastUnorderedTimeStamps, false,                     \
           "Use platform unstable time where supported for timestamps only") \
                                                                             \
+  product(ccstr, CRaCCheckpointTo, NULL, "Path to checkpoint image")        \
+                                                                            \
+  product(ccstr, CRaCRestoreFrom, NULL, "Path to image for restore, "       \
+      "replaces the initializing VM on success")                            \
+                                                                            \
+  product(bool, CRaCIgnoreRestoreIfUnavailable, false, "Ignore "            \
+      "-XX:CRaCRestoreFrom and continue initialization if restore is "      \
+      "unavailable")                                                        \
+                                                                            \
   diagnostic(bool, CRAllowToSkipCheckpoint, false,                          \
           "Allow implementation to not call Checkpoint if helper not found")\
                                                                             \

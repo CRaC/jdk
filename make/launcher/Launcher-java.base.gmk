@@ -103,9 +103,9 @@ endif
 
 ifeq ($(OPENJDK_TARGET_OS), linux)
   $(eval $(call SetupJdkExecutable, BUILD_RESTORE_SCRIPT, \
-      NAME := restore-script, \
-      SRC := $(TOPDIR)/src/$(MODULE)/unix/native/restore-script, \
-      INCLUDE_FILES := restore-script.c, \
+      NAME := action-script, \
+      SRC := $(TOPDIR)/src/$(MODULE)/unix/native/action-script, \
+      INCLUDE_FILES := action-script.c, \
       OPTIMIZATION := HIGH, \
       CFLAGS := $(CFLAGS_JDKEXE), \
       LDFLAGS := $(LDFLAGS_JDKEXE), \
