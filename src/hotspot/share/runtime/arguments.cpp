@@ -3281,7 +3281,7 @@ jint Arguments::finalize_vm_init_args(bool patch_mod_javabase) {
 
   if (CRaCRestoreFrom) {
     os::Linux::restore();
-    if (CRaCRequireRestore) {
+    if (!CRaCIgnoreRestoreIfUnavailable) {
       // FIXME switch to unified hotspot logging
       warning("cannot restore");
       return JNI_ERR;
