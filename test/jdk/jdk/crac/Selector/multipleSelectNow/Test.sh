@@ -31,13 +31,13 @@
 set -x
 
 set +e
-${TESTJAVA}/bin/java -cp ${TESTCLASSPATH} -Zcheckpoint:cr Test 1
+${TESTJAVA}/bin/java -cp ${TESTCLASSPATH} -XX:CRaCCheckpointTo=cr Test 1
 e=$?
 
 set -e
 [ $e -eq 137 ]
 
-${TESTJAVA}/bin/java -Zrestore:cr Test
+${TESTJAVA}/bin/java -XX:CRaCRestoreFrom=cr Test
 echo "PASSED 1"
 
 

@@ -36,13 +36,13 @@ do
     IMGDIR="cr$test"
 
     set +e
-    ${TESTJAVA}/bin/java -cp ${TESTCLASSPATH}:$CPAPPEND -Zcheckpoint:$IMGDIR Test $test
+    ${TESTJAVA}/bin/java -cp ${TESTCLASSPATH}:$CPAPPEND -XX:CRaCCheckpointTo=$IMGDIR Test $test
     e=$?
 
     set -e
     [ $e -eq 137 ]
 
-    ${TESTJAVA}/bin/java -Zrestore:$IMGDIR Test
+    ${TESTJAVA}/bin/java -XX:CRaCRestoreFrom=$IMGDIR Test
 
     echo "PASSED $test"
 
